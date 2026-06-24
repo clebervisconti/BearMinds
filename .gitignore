@@ -13,3 +13,6 @@
 .env.*
 *.pem
 *.key
+
+# Hook pessoal (depende da keychain/SSH local)
+.claude/settings.local.json
