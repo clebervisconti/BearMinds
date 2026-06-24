@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Ambiente / segredos (nunca versionar)
+.env
+.env.*
+*.pem
+*.key
