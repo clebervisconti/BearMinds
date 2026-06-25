@@ -81,7 +81,7 @@ Tipos de questão:
 ## 4. Publicar
 Depois de gravar o arquivo `content-*.js`, rode (registra no index + deploy):
 ```
-bash "/Volumes/STORAGE/Cyberlabs/Apps/BearMinds/publish.sh"
+bash "/Volumes/STORAGE/Cyberlabs/Web Apps/BearMinds/publish.sh"
 ```
 O nó (ano/turma/disciplina/trimestre) passa a aparecer habilitado em
 https://bearminds.cybersphere.com.br — os demais continuam "em breve".

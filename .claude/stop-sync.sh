@@ -5,7 +5,7 @@
 set -uo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
-PROJECT="/Volumes/STORAGE/Cyberlabs/Apps/BearMinds"
+PROJECT="/Volumes/STORAGE/Cyberlabs/Web Apps/BearMinds"
 cd "$PROJECT" 2>/dev/null || exit 0
 
 # Só age num repo git com mudanças pendentes.
