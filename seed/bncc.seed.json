@@ -1,0 +1,251 @@
+{
+  "_meta": {
+    "note": "Corpus BNCC verificado (moat #1). Só habilidades com verified_at são servíveis. Conteúdo dos chunks = fonte de grounding: precisa estar CORRETO.",
+    "area": "Matemática",
+    "coverage": "6º–9º ano EF",
+    "verified_at": "2026-07-01"
+  },
+  "skills": [
+    {
+      "code": "EF06MA07",
+      "stage": "EF",
+      "grade_band": "6EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Compreender, comparar e ordenar frações associadas às ideias de partes de inteiros e resultado de divisão, identificando frações equivalentes.",
+      "objects": "Frações: comparação, ordenação, equivalência",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF06MA07_1",
+          "source_title": "Fundamentos de Frações — material verificado",
+          "source_ref": "Unidade 3, p.42",
+          "content": "Duas frações são equivalentes quando representam a mesma parte de um inteiro. Para obter uma fração equivalente, multiplica-se ou divide-se o numerador e o denominador pelo mesmo número diferente de zero. Por exemplo, 1/2 = 2/4 = 3/6, porque multiplicando numerador e denominador de 1/2 por 2 obtém-se 2/4."
+        },
+        {
+          "id": "chunk_EF06MA07_2",
+          "source_title": "Comparação de Frações — material verificado",
+          "source_ref": "Unidade 3, p.45",
+          "content": "Para comparar frações com denominadores diferentes, reescrevem-se as frações como equivalentes com o mesmo denominador (denominador comum) e comparam-se os numeradores. Exemplo: para comparar 1/2 e 2/3, usa-se denominador 6: 1/2 = 3/6 e 2/3 = 4/6; como 4 > 3, tem-se 2/3 > 1/2. Simplificar uma fração é dividir numerador e denominador pelo mesmo número até obter a forma irredutível."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF06MA07_1", "atom_text": "Reconhecer que duas frações são equivalentes quando representam a mesma parte do inteiro." },
+        { "id": "atom_EF06MA07_2", "atom_text": "Obter uma fração equivalente multiplicando numerador e denominador pelo mesmo número diferente de zero." },
+        { "id": "atom_EF06MA07_3", "atom_text": "Simplificar uma fração dividindo numerador e denominador pelo mesmo número.", "prereq_id": "atom_EF06MA07_2" },
+        { "id": "atom_EF06MA07_4", "atom_text": "Comparar frações com denominadores diferentes usando um denominador comum.", "prereq_id": "atom_EF06MA07_1" }
+      ]
+    },
+    {
+      "code": "EF06MA08",
+      "stage": "EF",
+      "grade_band": "6EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Reconhecer que os números racionais positivos podem ser expressos nas formas fracionária e decimal, estabelecer relações entre essas representações e relacioná-los a pontos na reta numérica.",
+      "objects": "Números racionais: representações fracionária e decimal",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF06MA08_1",
+          "source_title": "Frações e Decimais — material verificado",
+          "source_ref": "Unidade 4, p.10",
+          "content": "Todo número racional positivo pode ser escrito como fração ou como número decimal. Para transformar uma fração em decimal, divide-se o numerador pelo denominador: 1/2 = 0,5; 3/4 = 0,75; 1/4 = 0,25. Para transformar um decimal em fração, escreve-se o número sobre 10, 100, 1000 conforme as casas decimais: 0,7 = 7/10 e 0,25 = 25/100 = 1/4."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF06MA08_1", "atom_text": "Converter uma fração em número decimal dividindo o numerador pelo denominador." },
+        { "id": "atom_EF06MA08_2", "atom_text": "Converter um número decimal em fração usando 10, 100 ou 1000 como denominador." },
+        { "id": "atom_EF06MA08_3", "atom_text": "Localizar números racionais positivos em pontos da reta numérica.", "prereq_id": "atom_EF06MA08_1" }
+      ]
+    },
+    {
+      "code": "EF06MA09",
+      "stage": "EF",
+      "grade_band": "6EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Resolver e elaborar problemas que envolvam o cálculo da fração de uma quantidade e cujo resultado seja um número natural, com e sem uso de calculadora.",
+      "objects": "Fração de uma quantidade",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF06MA09_1",
+          "source_title": "Fração de uma Quantidade — material verificado",
+          "source_ref": "Unidade 4, p.22",
+          "content": "Calcular a fração de uma quantidade significa dividir a quantidade pelo denominador e multiplicar pelo numerador. Por exemplo, 3/4 de 20: divide-se 20 por 4, obtendo 5, e multiplica-se por 3, obtendo 15. Assim, 3/4 de 20 é igual a 15."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF06MA09_1", "atom_text": "Calcular a fração de uma quantidade dividindo pelo denominador e multiplicando pelo numerador." },
+        { "id": "atom_EF06MA09_2", "atom_text": "Resolver problemas do cotidiano que envolvam a fração de uma quantidade.", "prereq_id": "atom_EF06MA09_1" }
+      ]
+    },
+    {
+      "code": "EF06MA13",
+      "stage": "EF",
+      "grade_band": "6EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Resolver e elaborar problemas que envolvam porcentagens, com base na ideia de proporcionalidade, sem fazer uso da 'regra de três'.",
+      "objects": "Porcentagem",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF06MA13_1",
+          "source_title": "Porcentagem — material verificado",
+          "source_ref": "Unidade 5, p.8",
+          "content": "Porcentagem é uma fração de denominador 100. Assim, 50% significa 50/100 = 1/2, e 25% significa 25/100 = 1/4. Para calcular 10% de um valor, divide-se o valor por 10. Para calcular 50%, divide-se por 2. Exemplo: 20% de 200 é 40, porque 20% = 20/100 = 1/5 e 200 dividido por 5 é 40."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF06MA13_1", "atom_text": "Entender porcentagem como uma fração de denominador 100." },
+        { "id": "atom_EF06MA13_2", "atom_text": "Calcular porcentagens simples (10%, 25%, 50%) de uma quantidade.", "prereq_id": "atom_EF06MA13_1" }
+      ]
+    },
+    {
+      "code": "EF07MA03",
+      "stage": "EF",
+      "grade_band": "7EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Comparar e ordenar números inteiros em diferentes contextos, associá-los a pontos da reta numérica e utilizá-los em situações que envolvam adição e subtração.",
+      "objects": "Números inteiros: comparação e reta numérica",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF07MA03_1",
+          "source_title": "Números Inteiros — material verificado",
+          "source_ref": "Unidade 1, p.14",
+          "content": "Os números inteiros incluem os positivos, o zero e os negativos. Na reta numérica, quanto mais à direita, maior o número: assim, -2 é maior que -5, porque -2 está mais à direita. Todo número negativo é menor que zero e que qualquer positivo. O módulo (valor absoluto) é a distância do número até o zero: o módulo de -5 é 5."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF07MA03_1", "atom_text": "Comparar números inteiros usando a posição na reta numérica." },
+        { "id": "atom_EF07MA03_2", "atom_text": "Reconhecer que todo número negativo é menor que zero e que qualquer positivo." },
+        { "id": "atom_EF07MA03_3", "atom_text": "Entender o módulo como a distância do número até o zero." }
+      ]
+    },
+    {
+      "code": "EF07MA04",
+      "stage": "EF",
+      "grade_band": "7EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Resolver e elaborar problemas que envolvam operações com números inteiros.",
+      "objects": "Operações com inteiros",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF07MA04_1",
+          "source_title": "Operações com Inteiros — material verificado",
+          "source_ref": "Unidade 1, p.28",
+          "content": "Na adição de inteiros com sinais iguais, somam-se os módulos e mantém-se o sinal: (-3) + (-4) = -7. Com sinais diferentes, subtraem-se os módulos e usa-se o sinal do maior módulo: (-3) + 5 = 2. Na multiplicação e divisão, sinais iguais dão resultado positivo e sinais diferentes dão resultado negativo: (-3) × (-4) = 12 e (-3) × 4 = -12."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF07MA04_1", "atom_text": "Somar e subtrair números inteiros observando os sinais." },
+        { "id": "atom_EF07MA04_2", "atom_text": "Aplicar a regra de sinais na multiplicação e divisão de inteiros." }
+      ]
+    },
+    {
+      "code": "EF07MA13",
+      "stage": "EF",
+      "grade_band": "7EF",
+      "area": "Matemática",
+      "component": "Números",
+      "description": "Resolver e elaborar problemas que envolvam porcentagens, incluindo acréscimos e decréscimos simples.",
+      "objects": "Porcentagem: acréscimos e decréscimos",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF07MA13_1",
+          "source_title": "Acréscimos e Descontos — material verificado",
+          "source_ref": "Unidade 2, p.30",
+          "content": "Um acréscimo de 10% sobre um valor é calculado somando 10% do valor a ele: 10% de 50 é 5, logo 50 com acréscimo de 10% é 55. Um desconto de 20% sobre 50 é calculado subtraindo 20% de 50 (que é 10), resultando em 40. Um acréscimo de 100% dobra o valor."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF07MA13_1", "atom_text": "Calcular um acréscimo percentual somando a porcentagem ao valor original." },
+        { "id": "atom_EF07MA13_2", "atom_text": "Calcular um desconto percentual subtraindo a porcentagem do valor original." }
+      ]
+    },
+    {
+      "code": "EF08MA06",
+      "stage": "EF",
+      "grade_band": "8EF",
+      "area": "Matemática",
+      "component": "Álgebra",
+      "description": "Resolver e elaborar problemas que envolvam o cálculo do valor numérico de expressões algébricas, utilizando as propriedades das operações.",
+      "objects": "Expressões algébricas: valor numérico",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF08MA06_1",
+          "source_title": "Valor Numérico — material verificado",
+          "source_ref": "Unidade 3, p.12",
+          "content": "O valor numérico de uma expressão algébrica é obtido substituindo cada letra pelo seu valor e efetuando as operações, respeitando a ordem: primeiro potências, depois multiplicações e divisões, por fim adições e subtrações. Por exemplo, para 2x + 3 com x = 4: 2×4 + 3 = 8 + 3 = 11."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF08MA06_1", "atom_text": "Substituir a variável pelo seu valor em uma expressão algébrica." },
+        { "id": "atom_EF08MA06_2", "atom_text": "Respeitar a ordem das operações ao calcular o valor numérico.", "prereq_id": "atom_EF08MA06_1" }
+      ]
+    },
+    {
+      "code": "EF08MA08",
+      "stage": "EF",
+      "grade_band": "8EF",
+      "area": "Matemática",
+      "component": "Álgebra",
+      "description": "Resolver e elaborar problemas que possam ser representados por sistemas de equações de 1º grau com duas incógnitas e interpretá-los, inclusive graficamente.",
+      "objects": "Sistemas de equações do 1º grau",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF08MA08_1",
+          "source_title": "Sistemas de Equações — material verificado",
+          "source_ref": "Unidade 4, p.20",
+          "content": "Um sistema de duas equações do 1º grau com duas incógnitas pode ser resolvido pelo método da substituição: isola-se uma incógnita em uma equação e substitui-se na outra. Por exemplo, no sistema x + y = 10 e x - y = 2, somando as duas equações obtém-se 2x = 12, logo x = 6, e então y = 4. A solução é o par (6, 4)."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF08MA08_1", "atom_text": "Representar um problema com duas incógnitas por um sistema de equações do 1º grau." },
+        { "id": "atom_EF08MA08_2", "atom_text": "Resolver um sistema do 1º grau pelo método da substituição ou da adição.", "prereq_id": "atom_EF08MA08_1" }
+      ]
+    },
+    {
+      "code": "EF09MA09",
+      "stage": "EF",
+      "grade_band": "9EF",
+      "area": "Matemática",
+      "component": "Álgebra",
+      "description": "Compreender os processos de fatoração de expressões algébricas, com base em suas relações com os produtos notáveis, para resolver e elaborar problemas.",
+      "objects": "Produtos notáveis e fatoração",
+      "verified_by": "BearMinds — curadoria humana",
+      "verified_at": "2026-07-01",
+      "chunks": [
+        {
+          "id": "chunk_EF09MA09_1",
+          "source_title": "Produtos Notáveis — material verificado",
+          "source_ref": "Unidade 2, p.16",
+          "content": "O quadrado da soma de dois termos é (a + b)² = a² + 2ab + b². O quadrado da diferença é (a - b)² = a² - 2ab + b². O produto da soma pela diferença é (a + b)(a - b) = a² - b². Por exemplo, (x + 3)² = x² + 6x + 9. Fatorar é o processo inverso: escrever a expressão como produto, por exemplo x² - 9 = (x + 3)(x - 3)."
+        }
+      ],
+      "atoms": [
+        { "id": "atom_EF09MA09_1", "atom_text": "Reconhecer e expandir o quadrado da soma e o quadrado da diferença." },
+        { "id": "atom_EF09MA09_2", "atom_text": "Reconhecer o produto da soma pela diferença como a² - b²." },
+        { "id": "atom_EF09MA09_3", "atom_text": "Fatorar expressões usando produtos notáveis.", "prereq_id": "atom_EF09MA09_2" }
+      ]
+    }
+  ]
+}

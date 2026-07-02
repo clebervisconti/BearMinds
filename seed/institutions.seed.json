@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "note": "Instituições + curriculum_map. TUDO resolve para códigos BNCC (spec 04). grade_equiv liga classes de rede (Y7) às séries BNCC (6EF). Adicionar uma 3ª instituição = novas linhas aqui, sem código."
+  },
+  "institutions": [
+    {
+      "id": "bncc-padrao",
+      "name": "Escola brasileira (BNCC)",
+      "kind": "default",
+      "locale": "pt-BR",
+      "config": {
+        "classes": [
+          { "id": "4EF", "label": "4º ano EF", "grade_equiv": "4EF", "age": "9–10" },
+          { "id": "5EF", "label": "5º ano EF", "grade_equiv": "5EF", "age": "10–11" },
+          { "id": "6EF", "label": "6º ano EF", "grade_equiv": "6EF", "age": "11–12" },
+          { "id": "7EF", "label": "7º ano EF", "grade_equiv": "7EF", "age": "12–13" },
+          { "id": "8EF", "label": "8º ano EF", "grade_equiv": "8EF", "age": "13–14" },
+          { "id": "9EF", "label": "9º ano EF", "grade_equiv": "9EF", "age": "14–15" },
+          { "id": "1EM", "label": "1ª série EM", "grade_equiv": "1EM", "age": "15–16" },
+          { "id": "2EM", "label": "2ª série EM", "grade_equiv": "2EM", "age": "16–17" },
+          { "id": "3EM", "label": "3ª série EM", "grade_equiv": "3EM", "age": "17–18" }
+        ],
+        "subjects": [
+          { "id": "matematica", "label": "Matemática", "icon": "🔢", "lang": "pt" },
+          { "id": "portugues", "label": "Português", "icon": "📚", "lang": "pt" },
+          { "id": "ciencias", "label": "Ciências", "icon": "🔬", "lang": "pt" },
+          { "id": "geografia", "label": "Geografia", "icon": "🌍", "lang": "pt" },
+          { "id": "historia", "label": "História", "icon": "🏛️", "lang": "pt" }
+        ],
+        "terms": ["t1", "t2", "t3"]
+      }
+    },
+    {
+      "id": "maple-bear",
+      "name": "Maple Bear Canadian School",
+      "kind": "network",
+      "locale": "pt-BR",
+      "config": {
+        "classes": [
+          { "id": "y4", "label": "Y4", "grade_equiv": "3EF", "age": "8–9" },
+          { "id": "y5", "label": "Y5", "grade_equiv": "4EF", "age": "9–10" },
+          { "id": "y6", "label": "Y6", "grade_equiv": "5EF", "age": "10–11" },
+          { "id": "y7", "label": "Y7", "grade_equiv": "6EF", "age": "11–12" },
+          { "id": "y8", "label": "Y8", "grade_equiv": "7EF", "age": "12–13" },
+          { "id": "y9", "label": "Y9", "grade_equiv": "8EF", "age": "13–14" }
+        ],
+        "subjects": [
+          { "id": "portugues", "label": "Português", "icon": "📚", "lang": "pt" },
+          { "id": "english", "label": "English", "icon": "🇬🇧", "lang": "en" },
+          { "id": "math", "label": "Math", "icon": "🔢", "lang": "en" },
+          { "id": "science", "label": "Science", "icon": "🔬", "lang": "en" },
+          { "id": "geografia", "label": "Geografia", "icon": "🌍", "lang": "pt" },
+          { "id": "historia", "label": "História", "icon": "🏛️", "lang": "pt" },
+          { "id": "artes", "label": "Artes", "icon": "🎨", "lang": "pt" }
+        ],
+        "terms": ["t1", "t2", "t3"]
+      }
+    }
+  ],
+  "curriculum_map": [
+    { "institution_id": "bncc-padrao", "class_id": "6EF", "subject_id": "matematica", "term": "t1", "bncc_code": "EF06MA07", "title": "Frações equivalentes", "display_order": 1 },
+    { "institution_id": "bncc-padrao", "class_id": "6EF", "subject_id": "matematica", "term": "t1", "bncc_code": "EF06MA08", "title": "Frações e números decimais", "display_order": 2 },
+    { "institution_id": "bncc-padrao", "class_id": "6EF", "subject_id": "matematica", "term": "t2", "bncc_code": "EF06MA09", "title": "Fração de uma quantidade", "display_order": 1 },
+    { "institution_id": "bncc-padrao", "class_id": "6EF", "subject_id": "matematica", "term": "t2", "bncc_code": "EF06MA13", "title": "Porcentagem", "display_order": 2 },
+    { "institution_id": "bncc-padrao", "class_id": "7EF", "subject_id": "matematica", "term": "t1", "bncc_code": "EF07MA03", "title": "Números inteiros na reta", "display_order": 1 },
+    { "institution_id": "bncc-padrao", "class_id": "7EF", "subject_id": "matematica", "term": "t1", "bncc_code": "EF07MA04", "title": "Operações com inteiros", "display_order": 2 },
+    { "institution_id": "bncc-padrao", "class_id": "7EF", "subject_id": "matematica", "term": "t2", "bncc_code": "EF07MA13", "title": "Acréscimos e descontos (%)", "display_order": 1 },
+    { "institution_id": "bncc-padrao", "class_id": "8EF", "subject_id": "matematica", "term": "t1", "bncc_code": "EF08MA06", "title": "Valor numérico de expressões", "display_order": 1 },
+    { "institution_id": "bncc-padrao", "class_id": "8EF", "subject_id": "matematica", "term": "t2", "bncc_code": "EF08MA08", "title": "Sistemas de equações", "display_order": 1 },
+    { "institution_id": "bncc-padrao", "class_id": "9EF", "subject_id": "matematica", "term": "t1", "bncc_code": "EF09MA09", "title": "Produtos notáveis e fatoração", "display_order": 1 },
+
+    { "institution_id": "maple-bear", "class_id": "y7", "subject_id": "math", "term": "t1", "bncc_code": "EF06MA07", "title": "Equivalent fractions", "display_order": 1 },
+    { "institution_id": "maple-bear", "class_id": "y7", "subject_id": "math", "term": "t1", "bncc_code": "EF06MA08", "title": "Fractions and decimals", "display_order": 2 },
+    { "institution_id": "maple-bear", "class_id": "y7", "subject_id": "math", "term": "t2", "bncc_code": "EF06MA09", "title": "Fraction of a quantity", "display_order": 1 },
+    { "institution_id": "maple-bear", "class_id": "y7", "subject_id": "math", "term": "t2", "bncc_code": "EF06MA13", "title": "Percentages", "display_order": 2 },
+    { "institution_id": "maple-bear", "class_id": "y8", "subject_id": "math", "term": "t1", "bncc_code": "EF07MA03", "title": "Integers on the number line", "display_order": 1 },
+    { "institution_id": "maple-bear", "class_id": "y8", "subject_id": "math", "term": "t1", "bncc_code": "EF07MA04", "title": "Operations with integers", "display_order": 2 },
+    { "institution_id": "maple-bear", "class_id": "y8", "subject_id": "math", "term": "t2", "bncc_code": "EF07MA13", "title": "Percent increase and discount", "display_order": 1 },
+    { "institution_id": "maple-bear", "class_id": "y9", "subject_id": "math", "term": "t1", "bncc_code": "EF08MA06", "title": "Numeric value of expressions", "display_order": 1 },
+    { "institution_id": "maple-bear", "class_id": "y9", "subject_id": "math", "term": "t2", "bncc_code": "EF08MA08", "title": "Systems of equations", "display_order": 1 }
+  ]
+}

@@ -11,8 +11,26 @@
 # Ambiente / segredos (nunca versionar)
 .env
 .env.*
+!.env.example
 *.pem
 *.key
+
+# Node / build (produto)
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Banco de dados (SQLite) — nunca versionar dados
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Coverage / logs
+coverage/
+*.log
 
 # Hook pessoal (depende da keychain/SSH local)
 .claude/settings.local.json

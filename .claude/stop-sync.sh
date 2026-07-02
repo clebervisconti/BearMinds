@@ -14,8 +14,9 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
 TS="$(date '+%Y-%m-%d %H:%M:%S')"
 
-# 1) Registra módulos de conteúdo (atualiza index.html se preciso)
-python3 scripts/register-content.py >/dev/null 2>&1 || true
+# 1) Registra módulos de conteúdo do app legado (atualiza legacy/public/index.html se preciso)
+#    (o app v0 foi congelado em legacy/ — ver specs/01-architecture.md)
+python3 legacy/scripts/register-content.py >/dev/null 2>&1 || true
 
 # 2) Versiona no GitHub
 git add -A
@@ -29,10 +30,12 @@ if ! git push -q origin main 2>/dev/null; then
   exit 0
 fi
 
-# 3) Publica no VPS (rsync + reload OpenLiteSpeed)
-if bash deploy.sh >/dev/null 2>&1; then
-  printf '{"systemMessage":"✅ BearMinds sincronizado: GitHub + VPS publicados."}\n'
+# 3) Publica o app LEGADO no VPS (rsync + reload OpenLiteSpeed).
+#    Produção continua servindo o app v0 congelado (legacy/public) até o cutover do
+#    novo produto (build dist/ + systemd bearminds-api) — ver specs/10-deployment.md.
+if bash legacy/deploy.sh >/dev/null 2>&1; then
+  printf '{"systemMessage":"✅ BearMinds sincronizado: GitHub + VPS (app legado) publicados."}\n'
 else
-  printf '{"systemMessage":"⚠️ BearMinds: GitHub OK, mas o deploy no VPS falhou. Rode manualmente: ./deploy.sh"}\n'
+  printf '{"systemMessage":"⚠️ BearMinds: GitHub OK, mas o deploy do app legado no VPS falhou. Rode manualmente: bash legacy/deploy.sh"}\n'
 fi
 exit 0

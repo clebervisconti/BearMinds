@@ -1,0 +1,71 @@
+/* ============================================================
+   BearMinds — Skins por faixa etária (spec 05 §5.2).
+   Um só JSON de conteúdo + troca de tokens = 3 experiências.
+   O <html data-skin="8-10|11-14|15-18"> controla o tema.
+   ============================================================ */
+
+:root {
+  --bm-radius: 16px;
+  --bm-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* fallback = 11-14 */
+  --bm-bg: #f7f8fc;
+  --bm-surface: #ffffff;
+  --bm-surface-2: #eef1fa;
+  --bm-ink: #1a1e2b;
+  --bm-muted: #6b7280;
+  --bm-primary: #6366f1;
+  --bm-primary-ink: #ffffff;
+  --bm-accent: #34c77b;
+  --bm-success: #22c55e;
+  --bm-warn: #f59e0b;
+  --bm-danger: #ef4444;
+  --bm-border: #e4e7f2;
+
+  --bm-scale: 1;
+}
+
+/* 8–10 — caloroso, lúdico, alvos grandes */
+[data-skin="8-10"] {
+  --bm-radius: 24px;
+  --bm-bg: #fff7ed;
+  --bm-surface: #ffffff;
+  --bm-surface-2: #fff0de;
+  --bm-ink: #2b2118;
+  --bm-muted: #8a7b6b;
+  --bm-primary: #f59e0b;
+  --bm-primary-ink: #ffffff;
+  --bm-accent: #34c77b;
+  --bm-border: #f0e2ce;
+  --bm-scale: 1.12;
+}
+
+/* 11–14 — moderno, peer-like (padrão) */
+[data-skin="11-14"] {
+  --bm-radius: 16px;
+  --bm-bg: #f7f8fc;
+  --bm-surface: #ffffff;
+  --bm-surface-2: #eef1fa;
+  --bm-ink: #1a1e2b;
+  --bm-muted: #6b7280;
+  --bm-primary: #6366f1;
+  --bm-primary-ink: #ffffff;
+  --bm-accent: #34c77b;
+  --bm-border: #e4e7f2;
+  --bm-scale: 1;
+}
+
+/* 15–18 — coach/analytics, escuro, compacto */
+[data-skin="15-18"] {
+  --bm-radius: 12px;
+  --bm-bg: #0f1620;
+  --bm-surface: #17202c;
+  --bm-surface-2: #1f2a38;
+  --bm-ink: #e7ecf3;
+  --bm-muted: #93a0b4;
+  --bm-primary: #2dd4bf;
+  --bm-primary-ink: #06231f;
+  --bm-accent: #34c77b;
+  --bm-border: #26303e;
+  --bm-scale: 0.96;
+}
