@@ -1,4 +1,5 @@
 import type { Hono } from "hono";
+import type { AppEnv } from "../lib/http.ts";
 import { securityHeaders } from "../middleware/security.ts";
 import { appVersion } from "../version.ts";
 import { llmConfigured } from "../env.ts";
@@ -11,7 +12,7 @@ import parentRoutes from "./parent.ts";
 import meRoutes from "./me.ts";
 
 // Registro central de rotas. Cada spec adiciona seu módulo aqui.
-export function mountRoutes(app: Hono) {
+export function mountRoutes(app: Hono<AppEnv>) {
   app.use("*", securityHeaders);
 
   // Deploy gate (spec 10.3)

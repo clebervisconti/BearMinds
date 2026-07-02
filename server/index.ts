@@ -48,7 +48,7 @@ if (serveDist) {
   });
 }
 
-serve({ fetch: app.fetch, port: env.port }, (info) => {
+serve({ fetch: app.fetch, port: env.port, hostname: process.env.HOST || undefined }, (info) => {
   logger.info(
     { port: info.port, version: appVersion, env: env.isProd ? "prod" : "dev", serveDist },
     `BearMinds API on :${info.port}`,

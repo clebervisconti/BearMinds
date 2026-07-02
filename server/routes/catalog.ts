@@ -3,20 +3,13 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db.ts";
-import { llm, parseJSON } from "../llm/provider.ts";
-import { pickModel } from "../llm/router.ts";
-import { llmConfigured } from "../env.ts";
 import { readJson, type AppEnv } from "../lib/http.ts";
 import { csrfGuard } from "../lib/session.ts";
-import { tokens } from "../lib/text.ts";
-import { readFileSync } from "node:fs";
-import { logger } from "../logger.ts";
-import type { Institution, TopicNode, TopicCandidate } from "../../shared/contracts.ts";
+import { resolveTopic } from "../gen/resolve.ts";
+import type { Institution, TopicNode } from "../../shared/contracts.ts";
 
 const app = new Hono<AppEnv>();
 app.use("/api/catalog/resolve-topic", csrfGuard);
-
-const prompt = (f: string) => readFileSync(new URL(`../prompts/${f}`, import.meta.url), "utf8");
 
 // GET /api/catalog/institutions
 app.get("/api/catalog/institutions", (c) => {
@@ -85,68 +78,8 @@ const resolveSchema = z.object({ text: z.string().trim().min(1).max(160), grade:
 
 app.post("/api/catalog/resolve-topic", async (c) => {
   const { text, grade } = await readJson(c, resolveSchema);
-
-  const skills = db
-    .prepare("SELECT code, description, area FROM bncc_skills WHERE verified_at IS NOT NULL")
-    .all() as { code: string; description: string; area: string }[];
-
-  // Fallback determinístico por palavras-chave (sempre disponível; não depende de LLM).
-  const keyword = keywordResolve(text, skills);
-
-  if (llmConfigured) {
-    try {
-      const catalog = skills.map((s) => `${s.code} — ${s.description}`).join("\n");
-      const res = await llm({
-        model: pickModel("resolve"),
-        json: true,
-        system: prompt("resolve.txt")
-          .replace("{{catalog}}", catalog)
-          .replace("{{grade}}", grade ?? "")
-          .replace("{{topic}}", text),
-        user: "Retorne os candidatos.",
-        maxTokens: 400,
-      });
-      const parsed = parseJSON<{ candidates: TopicCandidate[] }>(res.text);
-      const valid = (parsed.candidates ?? [])
-        .filter((cand) => skills.some((s) => s.code === cand.bncc_code))
-        .map((cand) => ({ ...cand, title: titleFor(cand.bncc_code) }));
-      if (valid.length) return c.json({ candidates: valid.slice(0, 3) });
-    } catch (e) {
-      logger.warn({ err: String(e) }, "resolve-topic LLM falhou; usando fallback por keyword");
-    }
-  }
-
-  return c.json({ candidates: keyword });
+  const candidates = await resolveTopic(text, grade);
+  return c.json({ candidates });
 });
-
-function titleFor(code: string): string {
-  const row = db.prepare("SELECT title FROM curriculum_map WHERE bncc_code = ? AND title IS NOT NULL LIMIT 1").get(code) as
-    | { title: string }
-    | undefined;
-  return row?.title ?? code;
-}
-
-function keywordResolve(
-  text: string,
-  skills: { code: string; description: string; area: string }[],
-): TopicCandidate[] {
-  const q = tokens(text);
-  if (q.length === 0) return [];
-  const scored = skills
-    .map((s) => {
-      const hay = new Set(tokens(`${s.description} ${s.area} ${titleFor(s.code)}`));
-      const overlap = q.filter((t) => hay.has(t)).length;
-      return { s, score: overlap / q.length };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-  return scored.map((x) => ({
-    bncc_code: x.s.code,
-    description: x.s.description,
-    title: titleFor(x.s.code),
-    confidence: Math.min(1, x.score),
-  }));
-}
 
 export default app;
