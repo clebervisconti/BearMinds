@@ -1,5 +1,10 @@
-// SQLite (better-sqlite3) — conexão, schema idempotente e migrações aditivas (spec 02).
-import Database from "better-sqlite3";
+// SQLite — conexão, schema idempotente e migrações aditivas (spec 02).
+//
+// Motor: `node:sqlite` (built-in, Node ≥ 22.5) atrás de um adaptador que preserva a
+// API estilo better-sqlite3 (prepare/run/get/all + pragma + transaction). Motivo:
+// better-sqlite3 (nativo) não compila contra o V8 do Node 26. node:sqlite não tem
+// build nativo — mais robusto no dev e no deploy. Ver specs/CHANGELOG.md.
+import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { nanoid } from "nanoid";
@@ -7,10 +12,59 @@ import { env } from "./env.ts";
 
 mkdirSync(dirname(env.databasePath), { recursive: true });
 
-export const db = new Database(env.databasePath);
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
-db.pragma("busy_timeout = 5000");
+type Row = Record<string, unknown>;
+export interface Stmt {
+  run(...params: unknown[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+  get<T = Row>(...params: unknown[]): T | undefined;
+  all<T = Row>(...params: unknown[]): T[];
+}
+
+const raw = new DatabaseSync(env.databasePath);
+raw.exec("PRAGMA journal_mode = WAL");
+raw.exec("PRAGMA foreign_keys = ON");
+raw.exec("PRAGMA busy_timeout = 5000");
+
+let txDepth = 0;
+
+// Adaptador com a superfície mínima usada em todo o servidor.
+export const db = {
+  prepare(sql: string): Stmt {
+    return raw.prepare(sql) as unknown as Stmt;
+  },
+  exec(sql: string): void {
+    raw.exec(sql);
+  },
+  // Compat com db.pragma(): "x = v" → exec; "x" → get; opts.simple → valor escalar.
+  pragma(stmt: string, opts?: { simple?: boolean }): unknown {
+    if (stmt.includes("=")) {
+      raw.exec(`PRAGMA ${stmt}`);
+      return undefined;
+    }
+    const row = raw.prepare(`PRAGMA ${stmt}`).get() as Row | undefined;
+    if (!row) return undefined;
+    const val = Object.values(row)[0];
+    return opts?.simple ? val : row;
+  },
+  // Retorna uma função que roda fn numa transação (SAVEPOINT se aninhada). Rollback em erro.
+  transaction<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
+    return (...args: A): R => {
+      const nested = txDepth > 0;
+      const sp = `bm_sp_${txDepth}`;
+      raw.exec(nested ? `SAVEPOINT ${sp}` : "BEGIN");
+      txDepth++;
+      try {
+        const r = fn(...args);
+        txDepth--;
+        raw.exec(nested ? `RELEASE ${sp}` : "COMMIT");
+        return r;
+      } catch (e) {
+        txDepth--;
+        raw.exec(nested ? `ROLLBACK TO ${sp}` : "ROLLBACK");
+        throw e;
+      }
+    };
+  },
+};
 
 export const newId = () => nanoid();
 export const nowIso = () => new Date().toISOString();

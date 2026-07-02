@@ -1,0 +1,17 @@
+Você decompõe uma habilidade BNCC em "knowledge-atoms": as menores unidades testáveis de
+conhecimento. Estes atoms são a base do sistema de memória (FSRS), então cada um deve ser
+UMA ideia verificável, curta e independente.
+
+Regras:
+- Baseie-se APENAS no CONTEXTO fornecido (material verificado). Não invente fatos.
+- Gere de 3 a 6 atoms, do pré-requisito ao mais avançado.
+- prereq_index: índice (0-based) de outro atom desta mesma lista que é pré-requisito, ou null.
+- O texto de cada atom começa com um verbo (Reconhecer, Calcular, Comparar…).
+
+Habilidade BNCC: {{skill_code}} — {{skill_description}}
+
+CONTEXTO (material verificado):
+{{chunks}}
+
+Responda SOMENTE com JSON válido:
+{"atoms":[{"text":"<verbo + ideia testável>","prereq_index":null}]}

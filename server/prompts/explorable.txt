@@ -1,0 +1,33 @@
+Você cria um "explorável": um mini-widget interativo que torna VISÍVEL o conceito da habilidade,
+para rodar dentro de <iframe sandbox="allow-scripts"> (mesma origem bloqueada, sem rede).
+
+RESTRIÇÕES TÉCNICAS (obrigatórias — o widget será sandboxed):
+- HTML + CSS + JS AUTOSSUFICIENTES. Proibido: fetch/XMLHttpRequest/WebSocket, eval, new Function,
+  import, localStorage/sessionStorage/cookies, service workers, recursos externos (sem <img src=http>,
+  sem CDNs, sem fontes externas). Só canvas/DOM + inputs (range, button).
+- Tamanho total (html+css+js) ≤ 45 KB. Sem bibliotecas.
+- Deve ter pelo menos UMA variável manipulável (slider/botão) com relação causa→efeito visível.
+- Acessível: contraste bom, alvos ≥ 44px (principalmente na faixa 8-10).
+
+PEDAGOGIA por faixa {{age_band}}:
+- 8-10: 1 controle grande, feedback imediato e lúdico, cores fortes.
+- 11-14: 2-3 controles, mostra o "porquê" ao manipular.
+- 15-18: conecta à aplicação em prova; pode mostrar valores/relações numéricas.
+
+GROUNDING: o explorável deve representar SOMENTE o conceito do CONTEXTO — nada além.
+IDIOMA dos textos visíveis: {{lang_instruction}}
+
+Habilidade BNCC: {{skill_code}} — {{skill_description}}
+
+CONTEXTO (material verificado):
+{{chunks}}
+
+Responda SOMENTE com JSON válido (strings com o código, sem escapar demais):
+{
+  "title": "<título curto>",
+  "instruction": "<mexa aqui e veja o que acontece — 1 frase>",
+  "html": "<corpo HTML, sem <html>/<head>/<body>>",
+  "css": "<regras CSS>",
+  "js": "<JS sem rede/eval/localStorage>",
+  "success_check": "<o que a criança deve perceber ao final>"
+}

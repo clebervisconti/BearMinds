@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5"
   },
   "scripts": {
     "dev": "concurrently -k -n web,api -c cyan,magenta \"npm:dev:web\" \"npm:dev:api\"",
@@ -24,7 +24,6 @@
     "@hono/node-server": "^1.13.7",
     "@tanstack/react-query": "^5.62.0",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.8.0",
     "hono": "^4.6.14",
     "minisearch": "^7.1.0",
     "nanoid": "^5.0.9",
@@ -38,7 +37,6 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
