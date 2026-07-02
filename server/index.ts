@@ -9,11 +9,23 @@ import { logger } from "./logger.ts";
 import { initDb } from "./db.ts";
 import { mountRoutes } from "./routes/index.ts";
 import { appVersion } from "./version.ts";
+import { AppError, type AppEnv } from "./lib/http.ts";
 
 // 1) Sobe o schema do SQLite (idempotente) antes de aceitar tráfego.
 initDb();
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
+
+// Erros tipados → {error:{code,message}}; erros inesperados → 500 genérico (sem vazar detalhe).
+app.onError((err, c) => {
+  if (err instanceof AppError) {
+    return c.json({ error: { code: err.code, message: err.message } }, err.status as 400);
+  }
+  logger.error({ err: String(err), path: c.req.path }, "unhandled error");
+  return c.json({ error: { code: "internal", message: "Algo deu errado. Tente novamente." } }, 500);
+});
+
+app.notFound((c) => c.json({ error: { code: "not_found", message: "Rota não encontrada." } }, 404));
 
 // 2) Rotas da API + headers de segurança.
 mountRoutes(app);
