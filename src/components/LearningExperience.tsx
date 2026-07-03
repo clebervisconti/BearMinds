@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { GenerateBundle } from "../../shared/contracts";
 import { api } from "../lib/api";
 import { Mascot, Progress } from "./common";
@@ -13,9 +14,11 @@ export function LearningExperience({ bundle, childId, onFinish }: {
   childId: string;
   onFinish: () => void;
 }) {
+  const qc = useQueryClient();
   const [phase, setPhase] = useState<Phase>("warmup");
   const [qi, setQi] = useState(0);
   const [nextDue, setNextDue] = useState<string | null>(null);
+  const [coinsEarned, setCoinsEarned] = useState(0);
 
   if (bundle.lesson.refused) {
     return (
@@ -44,12 +47,19 @@ export function LearningExperience({ bundle, childId, onFinish }: {
       try {
         const res = await api.review(childId, q.atom_id, rating);
         setNextDue(res.due);
+        setCoinsEarned((c) => c + (res.coins_earned ?? 0));
       } catch {
         /* progresso é best-effort na UI; o servidor é a fonte da verdade */
       }
     }
     if (qi + 1 < questions.length) setQi(qi + 1);
-    else setPhase("done");
+    else {
+      setPhase("done");
+      // atualiza moedas/notificações/fila no shell
+      qc.invalidateQueries({ queryKey: ["coins"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["today"] });
+    }
   }
 
   return (
@@ -116,6 +126,7 @@ export function LearningExperience({ bundle, childId, onFinish }: {
                   {nextDue
                     ? `Voltamos a isso em ${daysUntil(nextDue)} 👊 (assim você não esquece).`
                     : "Volto a te lembrar disso no momento certo. 👊"}
+                  {coinsEarned > 0 && <> Você ganhou <b>🪙 {coinsEarned}</b> nesta lição.</>}
                 </p>
               </>
             }

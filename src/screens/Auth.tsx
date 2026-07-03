@@ -84,8 +84,8 @@ export function CriarConta() {
   }
 
   return (
-    <AuthShell title="Criar conta do responsável">
-      <Mascot message="A conta é sua, responsável. Seu filho estuda no perfil dele — sem dados além do apelido, ano de nascimento e série." />
+    <AuthShell title="Criar sua conta">
+      <Mascot message="Você é o titular da conta: pode estudar aqui e/ou criar perfis para seus filhos. Guardamos só o essencial — apelido, ano de nascimento e série." />
       <form onSubmit={submit} style={{ display: "grid", gap: ".8rem", marginTop: ".5rem" }}>
         <input className="bm-input" type="email" placeholder="Seu e-mail" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         <input className="bm-input" type="password" placeholder="Senha (mín. 10 caracteres)" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />

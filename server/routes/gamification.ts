@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { db } from "../db.ts";
 import { requireParent, ownChildOrThrow } from "../lib/session.ts";
 import { notFound, type AppEnv } from "../lib/http.ts";
-import { coinBalance, weekCoins } from "../gamify.ts";
+import { coinBalance, weekCoins, weeklyLeaderboard } from "../gamify.ts";
 import type { CoinState, LeaderboardEntry } from "../../shared/contracts.ts";
 
 const app = new Hono<AppEnv>();
@@ -45,20 +45,7 @@ app.get("/api/leaderboard", requireParent, (c) => {
     .get(childId) as { inst: string } | undefined;
   if (!me) throw notFound("child_not_found", "Perfil não encontrado.");
 
-  const since = new Date(Date.now() - 7 * 86400000).toISOString();
-  const rows = db
-    .prepare(
-      `SELECT ch.id, ch.display_name, COALESCE(SUM(l.delta), 0) AS coins
-       FROM children ch
-       LEFT JOIN coin_ledger l ON l.child_id = ch.id AND l.created_at >= ?
-       WHERE COALESCE(ch.institution_id,'bncc-padrao') = ?
-         AND ch.deleted_at IS NULL AND ch.leaderboard_hidden = 0
-       GROUP BY ch.id
-       HAVING coins > 0
-       ORDER BY coins DESC, ch.display_name
-       LIMIT 20`,
-    )
-    .all(since, me.inst) as { id: string; display_name: string; coins: number }[];
+  const rows = weeklyLeaderboard(me.inst);
 
   const entries: LeaderboardEntry[] = rows.map((r, i) => ({
     rank: i + 1,

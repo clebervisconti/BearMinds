@@ -137,6 +137,24 @@ export function weekCoins(childId: string): number {
     .get(childId, since) as { n: number }).n;
 }
 
+/** Ranking semanal de uma instituição (spec 12.4): apelido apenas, exclui perfis ocultos. */
+export function weeklyLeaderboard(institutionId: string, limit = 20): { id: string; display_name: string; coins: number }[] {
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
+  return db
+    .prepare(
+      `SELECT ch.id, ch.display_name, COALESCE(SUM(l.delta), 0) AS coins
+       FROM children ch
+       LEFT JOIN coin_ledger l ON l.child_id = ch.id AND l.created_at >= ?
+       WHERE COALESCE(ch.institution_id,'bncc-padrao') = ?
+         AND ch.deleted_at IS NULL AND ch.leaderboard_hidden = 0
+       GROUP BY ch.id
+       HAVING coins > 0
+       ORDER BY coins DESC, ch.display_name
+       LIMIT ?`,
+    )
+    .all(since, institutionId, limit) as { id: string; display_name: string; coins: number }[];
+}
+
 function reviewCoinsCountedToday(childId: string): number {
   const dayStart = `${localDay()}T00:00:00`;
   // created_at é UTC; o dia local (UTC-3) começa 03:00 UTC — aproximação simples e estável

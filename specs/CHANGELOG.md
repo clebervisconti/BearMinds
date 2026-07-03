@@ -16,6 +16,13 @@
   `achievements`, `community_posts`, `community_replies`.
 - Nenhum guardrail do spec 05 (grounding/answer-withholding/sandbox) foi alterado.
 
+**Entregue (mesma data):** shell formal (sidebar desktop + bottom nav mobile), 7 áreas (Dashboard, Cursos,
+Atividades, Comunidade, Conquistas, Notificações, Configurações), onboarding "Quem vai estudar?" (Eu mesmo /
+Meu filho), economia de moedas + 6 badges + leaderboard por instituição, rotas
+notifications/gamification/community, cliente tipado + hooks. Verificado: `tsc` limpo, **25 testes vitest**,
+build 84.7 KB gzip, walkthrough no preview (self-onboarding → loop completo com 90 moedas + badge +
+notificação → post na comunidade → leaderboard; fluxo filho com gate LGPD intacto e skin infantil SÓ na Aula).
+
 Registro datado de onde a implementação divergiu das specs (regra do 11-roadmap).
 
 ## 2026-07-02 — Upgrade P1 (static v0 → produto PWA + API)
