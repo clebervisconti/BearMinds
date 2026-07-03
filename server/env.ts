@@ -78,8 +78,12 @@ export const env = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
+  // Só é obrigatório quando o gate Apple está ligado; senão usa efêmero (não quebra o boot em prod).
   gateCookieSecret:
-    process.env.GATE_COOKIE_SECRET || required("GATE_COOKIE_SECRET", () => randomBytes(16).toString("hex")),
+    process.env.GATE_COOKIE_SECRET ||
+    (process.env.GATE_MODE === "apple"
+      ? required("GATE_COOKIE_SECRET", () => randomBytes(16).toString("hex"))
+      : randomBytes(16).toString("hex")),
 };
 
 export const llmConfigured = Boolean(env.geminiApiKey || env.anthropicApiKey);
