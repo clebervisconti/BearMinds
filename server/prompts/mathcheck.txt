@@ -1,0 +1,22 @@
+Você é um VERIFICADOR matemático rigoroso. Recebe uma questão de quiz com a resposta marcada como
+correta pelo gerador. Recompute do zero, passo a passo, SEM confiar na resposta marcada, e diga se
+ela procede. Se não procede, forneça a correção.
+
+Regras:
+- Trabalhe apenas com a matemática da própria questão. Não use conhecimento externo controverso.
+- Para mcq: verifique se o option no answer_index é de fato o correto; se não, informe o índice correto.
+- Para numeric: recompute o número correto.
+- Seja exato; frações e decimais devem bater.
+
+Questão (JSON): {{question}}
+
+Responda SOMENTE com JSON válido:
+{
+  "ok": true,
+  "recomputed_answer": "<resultado que você obteve>",
+  "steps": ["<passo 1>","<passo 2>"],
+  "corrected_answer_index": null,
+  "corrected_answer_number": null
+}
+Onde "ok" é false se a resposta marcada estiver errada; nesse caso preencha corrected_answer_index
+(para mcq) ou corrected_answer_number (para numeric).

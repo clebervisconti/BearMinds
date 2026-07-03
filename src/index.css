@@ -1,0 +1,92 @@
+@import "./styles/skins.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--bm-bg);
+    color: var(--bm-ink);
+    font-family: var(--bm-font);
+    font-size: calc(16px * var(--bm-scale));
+    line-height: 1.5;
+    /* safe-area para PWA em tela cheia no iOS */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+    min-height: 100dvh;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  button {
+    font-family: inherit;
+  }
+  h1, h2, h3 {
+    color: var(--bm-ink);
+    line-height: 1.2;
+  }
+}
+
+@layer components {
+  .bm-card {
+    background: var(--bm-surface);
+    border: 1px solid var(--bm-border);
+    border-radius: var(--bm-radius);
+    padding: 1rem;
+  }
+  .bm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px; /* alvo de toque acessível */
+    padding: 0.65rem 1.1rem;
+    border-radius: calc(var(--bm-radius) * 0.8);
+    background: var(--bm-primary);
+    color: var(--bm-primary-ink);
+    border: 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      transform 0.06s ease,
+      filter 0.15s ease;
+  }
+  .bm-btn:active {
+    transform: translateY(1px) scale(0.99);
+  }
+  .bm-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .bm-btn-ghost {
+    background: transparent;
+    color: var(--bm-primary);
+    border: 1px solid var(--bm-border);
+  }
+  .bm-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.6rem 0.8rem;
+    border-radius: calc(var(--bm-radius) * 0.7);
+    border: 1px solid var(--bm-border);
+    background: var(--bm-surface);
+    color: var(--bm-ink);
+    font-size: 1rem;
+  }
+  .bm-input:focus {
+    outline: 2px solid var(--bm-primary);
+    outline-offset: 1px;
+  }
+  .bm-shell {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 1rem;
+    min-height: 100dvh;
+  }
+}
