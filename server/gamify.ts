@@ -1,7 +1,10 @@
-// Gamificação "done right" (spec 07): mecânica só a serviço de recuperação + espaçamento.
+// Gamificação "done right" (specs 07 + 12): mecânica só a serviço de recuperação + espaçamento.
 // Streak amarrado a evento de aprendizagem real (revisão com rating ≥ 2), com 1 freeze/semana.
-import { db, nowIso } from "./db.ts";
+// Moedas/conquistas (spec 12.3): nascem SOMENTE de eventos de aprendizagem — nunca de tempo de tela.
+import { db, newId, nowIso } from "./db.ts";
 import { localDay } from "./lib/domain.ts";
+import { provaCountdowns } from "./mastery/today.ts";
+import type { ReviewResult } from "./mastery/fsrs.ts";
 
 /** Um "learning event" = revisão com rating ≥ 2. Ler lição não conta (spec 07 §1). */
 export function recordLearningEvent(childId: string, rating: number): boolean {
@@ -95,4 +98,136 @@ export function masteryBySubject(childId: string): SubjectMastery[] {
     else s.reviewing++;
   }
   return [...bySubject.values()];
+}
+
+// ============================================================
+// MOEDAS & CONQUISTAS (spec 12.3) — regras anti-dark-pattern do
+// spec 07 mantidas: moeda só por evento de aprendizagem real.
+// ============================================================
+
+export const COIN_RULES = {
+  review: 10, // por revisão com rating ≥ 2
+  reviewDailyCap: 12, // máx. revisões/dia que geram moeda (= cap da fila)
+  atomMastered: 25, // primeira vez que um atom fica "lembrado"
+  streakMilestone: 50, // marcos de streak (7 e 30 dias)
+} as const;
+
+/** Regra pura de moeda por revisão (testável): rating < 2 ou cap diário atingido ⇒ 0. */
+export function coinsForReview(rating: number, reviewsCountedToday: number): number {
+  if (rating < 2) return 0;
+  if (reviewsCountedToday >= COIN_RULES.reviewDailyCap) return 0;
+  return COIN_RULES.review;
+}
+
+export function awardCoins(childId: string, delta: number, reason: string, refId?: string): void {
+  db.prepare(
+    "INSERT INTO coin_ledger (id, child_id, delta, reason, ref_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(newId(), childId, delta, reason, refId ?? null, nowIso());
+}
+
+export function coinBalance(childId: string): number {
+  return (db.prepare("SELECT COALESCE(SUM(delta),0) n FROM coin_ledger WHERE child_id = ?").get(childId) as { n: number }).n;
+}
+
+/** Moedas ganhas nos últimos 7 dias (base do leaderboard semanal). */
+export function weekCoins(childId: string): number {
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
+  return (db
+    .prepare("SELECT COALESCE(SUM(delta),0) n FROM coin_ledger WHERE child_id = ? AND created_at >= ?")
+    .get(childId, since) as { n: number }).n;
+}
+
+function reviewCoinsCountedToday(childId: string): number {
+  const dayStart = `${localDay()}T00:00:00`;
+  // created_at é UTC; o dia local (UTC-3) começa 03:00 UTC — aproximação simples e estável
+  const sinceUtc = new Date(new Date(dayStart + "Z").getTime() + 3 * 3600 * 1000).toISOString();
+  return (db
+    .prepare("SELECT COUNT(*) n FROM coin_ledger WHERE child_id = ? AND reason = 'review' AND created_at >= ?")
+    .get(childId, sinceUtc) as { n: number }).n;
+}
+
+const ACHIEVEMENT_TITLES: Record<string, string> = {
+  first_lesson: "Primeira missão cumprida",
+  streak_7: "7 dias seguidos estudando",
+  streak_30: "30 dias seguidos estudando",
+  atoms_10: "10 conceitos dominados",
+  atoms_50: "50 conceitos dominados",
+  prova_ready_80: "80% pronto para uma prova",
+};
+
+/** Desbloqueia (dedup por UNIQUE). Retorna true se foi um desbloqueio novo; grava notificação. */
+export function unlockAchievement(parentId: string, childId: string, code: string): boolean {
+  try {
+    db.prepare("INSERT INTO achievements (id, child_id, code, unlocked_at) VALUES (?, ?, ?, ?)").run(
+      newId(), childId, code, nowIso(),
+    );
+  } catch {
+    return false; // já desbloqueada (UNIQUE child_id+code)
+  }
+  const title = ACHIEVEMENT_TITLES[code] ?? code;
+  db.prepare(
+    `INSERT INTO notifications (id, parent_id, child_id, kind, title, body, link, created_at)
+     VALUES (?, ?, ?, 'achievement', ?, ?, '/conquistas', ?)`,
+  ).run(newId(), parentId, childId, `🏅 Conquista: ${title}`, "Continue assim — consistência vence.", nowIso());
+  return true;
+}
+
+export interface ReviewRewards {
+  coins: number;
+  unlocked: string[];
+}
+
+/** Processa recompensas após uma revisão FSRS (chamado pela rota /api/mastery/review). */
+export function processReviewRewards(
+  parentId: string,
+  childId: string,
+  atomId: string,
+  rating: number,
+  result: ReviewResult,
+): ReviewRewards {
+  let coins = 0;
+  const unlocked: string[] = [];
+
+  // 1) moeda por revisão (regra pura + cap diário)
+  const counted = reviewCoinsCountedToday(childId);
+  const c = coinsForReview(rating, counted);
+  if (c > 0) {
+    awardCoins(childId, c, "review", atomId);
+    coins += c;
+  }
+
+  // 2) atom dominado pela 1ª vez (dedup pelo ledger)
+  if (result.state === "review" && result.retrievability >= 0.9) {
+    const seen = db
+      .prepare("SELECT 1 FROM coin_ledger WHERE child_id = ? AND reason = 'atom_mastered' AND ref_id = ? LIMIT 1")
+      .get(childId, atomId);
+    if (!seen) {
+      awardCoins(childId, COIN_RULES.atomMastered, "atom_mastered", atomId);
+      coins += COIN_RULES.atomMastered;
+    }
+  }
+
+  // 3) conquistas
+  if (unlockAchievement(parentId, childId, "first_lesson")) unlocked.push("first_lesson");
+  const streak = currentStreak(childId);
+  if (streak >= 7 && unlockAchievement(parentId, childId, "streak_7")) {
+    awardCoins(childId, COIN_RULES.streakMilestone, "streak_7");
+    coins += COIN_RULES.streakMilestone;
+    unlocked.push("streak_7");
+  }
+  if (streak >= 30 && unlockAchievement(parentId, childId, "streak_30")) {
+    awardCoins(childId, COIN_RULES.streakMilestone, "streak_30");
+    coins += COIN_RULES.streakMilestone;
+    unlocked.push("streak_30");
+  }
+  const mastered = (db
+    .prepare("SELECT COUNT(*) n FROM coin_ledger WHERE child_id = ? AND reason = 'atom_mastered'")
+    .get(childId) as { n: number }).n;
+  if (mastered >= 10 && unlockAchievement(parentId, childId, "atoms_10")) unlocked.push("atoms_10");
+  if (mastered >= 50 && unlockAchievement(parentId, childId, "atoms_50")) unlocked.push("atoms_50");
+  if (provaCountdowns(childId).some((p) => p.readiness >= 0.8)) {
+    if (unlockAchievement(parentId, childId, "prova_ready_80")) unlocked.push("prova_ready_80");
+  }
+
+  return { coins, unlocked };
 }

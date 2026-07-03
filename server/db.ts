@@ -239,6 +239,58 @@ CREATE TABLE IF NOT EXISTS audit_log (
   detail_json TEXT
 );
 
+-- ===== PLATFORM v2 (spec 12): notificações, moedas, conquistas, comunidade =====
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  parent_id TEXT NOT NULL,
+  child_id TEXT,
+  kind TEXT NOT NULL,                         -- 'achievement' | 'reply' | 'system'
+  title TEXT NOT NULL,
+  body TEXT,
+  link TEXT,
+  read_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS coin_ledger (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  delta INTEGER NOT NULL,
+  reason TEXT NOT NULL,                       -- 'review' | 'atom_mastered' | 'streak_7' | 'streak_30'
+  ref_id TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS achievements (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  code TEXT NOT NULL,                         -- first_lesson | streak_7 | streak_30 | atoms_10 | atoms_50 | prova_ready_80
+  unlocked_at TEXT NOT NULL,
+  UNIQUE(child_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS community_posts (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  institution_id TEXT NOT NULL,
+  subject_id TEXT,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  flagged INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS community_replies (
+  id TEXT PRIMARY KEY,
+  post_id TEXT NOT NULL REFERENCES community_posts(id),
+  child_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  flagged INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+
 -- ===== METRICS (privacy-preserving, agregados — spec 09.3) =====
 CREATE TABLE IF NOT EXISTS metrics_daily (
   day TEXT PRIMARY KEY,
@@ -260,20 +312,29 @@ CREATE INDEX IF NOT EXISTS idx_atoms_code ON knowledge_atoms(bncc_code);
 CREATE INDEX IF NOT EXISTS idx_mastery_due ON mastery_state(child_id, due);
 CREATE INDEX IF NOT EXISTS idx_study_child ON study_sessions(child_id);
 CREATE INDEX IF NOT EXISTS idx_prova_child ON prova_calendar(child_id, exam_date);
+CREATE INDEX IF NOT EXISTS idx_notif_parent ON notifications(parent_id, read_at);
+CREATE INDEX IF NOT EXISTS idx_coins_child ON coin_ledger(child_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_posts_inst ON community_posts(institution_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_replies_post ON community_replies(post_id, created_at);
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 let initialized = false;
 
 export function initDb(): void {
   if (initialized) return;
   db.exec(SCHEMA);
-  const row = db.pragma("user_version", { simple: true }) as number;
-  if (row < SCHEMA_VERSION) {
-    // Futuras migrações aditivas entram aqui, guardadas por versão.
-    db.pragma(`user_version = ${SCHEMA_VERSION}`);
+  const version = db.pragma("user_version", { simple: true }) as number;
+  if (version < 2) {
+    // v2 (spec 12): perfis self + opt-out do leaderboard — colunas aditivas em children.
+    const cols = (db.prepare("PRAGMA table_info(children)").all() as { name: string }[]).map((c) => c.name);
+    if (!cols.includes("kind")) db.exec("ALTER TABLE children ADD COLUMN kind TEXT DEFAULT 'child'");
+    if (!cols.includes("leaderboard_hidden")) {
+      db.exec("ALTER TABLE children ADD COLUMN leaderboard_hidden INTEGER DEFAULT 0");
+    }
   }
+  if (version < SCHEMA_VERSION) db.pragma(`user_version = ${SCHEMA_VERSION}`);
   initialized = true;
 }
 

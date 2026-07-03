@@ -1,7 +1,8 @@
 // Cliente HTTP tipado (contratos em shared/contracts). Envia cookie + header CSRF.
 import type {
   MeResponse, Institution, TopicNode, TopicCandidate, GenerateBundle, TodayResponse,
-  ParentSummary, ConsentScope, ConsentState,
+  ParentSummary, ConsentScope, ConsentState, AppNotification, CoinState, LeaderboardResponse,
+  CommunityPost, CommunityReply,
 } from "../../shared/contracts";
 
 export class ApiError extends Error {
@@ -69,16 +70,50 @@ export const api = {
   generate: (input: { child_id: string; bncc_code?: string; topic?: string; grade?: string; lang?: "pt" | "en" }) =>
     req<GenerateBundle>("POST", "/generate", input),
   review: (child_id: string, atom_id: string, rating: 1 | 2 | 3 | 4, duration_sec?: number) =>
-    req<{ due: string; state: string; retrievability: number; streak: number; counted_as_learning_event: boolean }>(
-      "POST",
-      "/mastery/review",
-      { child_id, atom_id, rating, duration_sec },
-    ),
+    req<{
+      due: string; state: string; retrievability: number; streak: number;
+      counted_as_learning_event: boolean; coins_earned: number; achievements_unlocked: string[];
+    }>("POST", "/mastery/review", { child_id, atom_id, rating, duration_sec }),
   today: (child_id: string) => req<TodayResponse>("GET", `/mastery/today?child_id=${encodeURIComponent(child_id)}`),
   createProva: (input: { child_id: string; title: string; subject_id?: string; exam_date: string; bncc_codes: string[] }) =>
     req<{ id: string }>("POST", "/provas", input),
   parentSummary: (child_id: string) =>
     req<ParentSummary>("GET", `/parent/summary?child_id=${encodeURIComponent(child_id)}`),
+
+  // ---- Plataforma v2 (spec 12) ----
+  createSelfProfile: (input: {
+    display_name?: string; birth_year: number; grade: string;
+    institution_id?: string | null; class_id?: string | null;
+    subjects?: string[]; priority_subject?: string | null;
+  }) => req<MeResponse>("POST", "/me/self-profile", input),
+  setLeaderboardVisibility: (child_id: string, hidden: boolean) =>
+    req<MeResponse>("POST", "/me/leaderboard-visibility", { child_id, hidden }),
+
+  notifications: (child_id: string) =>
+    req<{ items: AppNotification[]; unread: number }>("GET", `/notifications?child_id=${encodeURIComponent(child_id)}`),
+  markNotificationsRead: (opts: { ids?: string[]; all?: boolean }) =>
+    req<{ ok: true }>("POST", "/notifications/read", opts),
+
+  coins: (child_id: string) => req<CoinState>("GET", `/coins?child_id=${encodeURIComponent(child_id)}`),
+  leaderboard: (child_id: string) =>
+    req<LeaderboardResponse>("GET", `/leaderboard?child_id=${encodeURIComponent(child_id)}`),
+
+  communityPosts: (child_id: string, subject?: string) =>
+    req<{ posts: CommunityPost[] }>(
+      "GET",
+      `/community/posts?child_id=${encodeURIComponent(child_id)}${subject ? `&subject=${encodeURIComponent(subject)}` : ""}`,
+    ),
+  createPost: (input: { child_id: string; subject_id?: string | null; title: string; body: string }) =>
+    req<{ id: string }>("POST", "/community/posts", input),
+  getPost: (id: string, child_id: string) =>
+    req<{ post: CommunityPost; replies: CommunityReply[] }>(
+      "GET",
+      `/community/posts/${encodeURIComponent(id)}?child_id=${encodeURIComponent(child_id)}`,
+    ),
+  replyPost: (post_id: string, child_id: string, body: string) =>
+    req<{ id: string }>("POST", `/community/posts/${encodeURIComponent(post_id)}/replies`, { child_id, body }),
+  reportContent: (kind: "post" | "reply", id: string) =>
+    req<{ ok: true }>("POST", "/community/report", { kind, id }),
 };
 
 export const EXPORT_URL = "/api/me/export";

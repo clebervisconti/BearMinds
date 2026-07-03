@@ -12,13 +12,14 @@ import {
   destroySession,
   clearSessionCookie,
 } from "../lib/session.ts";
-import { readJson, badRequest, forbidden, notFound, unprocessable, type AppEnv } from "../lib/http.ts";
+import { readJson, badRequest, forbidden, notFound, unprocessable, conflict, type AppEnv } from "../lib/http.ts";
 import { audit } from "../lib/audit.ts";
 import {
   REQUIRED_CONSENTS,
   ALL_CONSENTS,
   MAX_CHILDREN,
   MIN_AGE,
+  MAX_AGE,
   ageFromBirthYear,
   ageBandFromAge,
 } from "../lib/domain.ts";
@@ -35,6 +36,7 @@ interface ChildRow {
   id: string; display_name: string; birth_year: number; grade: string; age_band: string;
   institution_id: string | null; class_id: string | null; subjects_json: string | null;
   priority_subject: string | null; avatar_seed: string | null;
+  kind: string | null; leaderboard_hidden: number | null;
 }
 
 function rowToChild(r: ChildRow): Child {
@@ -49,6 +51,8 @@ function rowToChild(r: ChildRow): Child {
     subjects: r.subjects_json ? (JSON.parse(r.subjects_json) as string[]) : [],
     priority_subject: r.priority_subject,
     avatar_seed: r.avatar_seed,
+    kind: (r.kind ?? "child") as Child["kind"],
+    leaderboard_hidden: r.leaderboard_hidden === 1,
   };
 }
 
@@ -56,7 +60,7 @@ function getChildren(parentId: string): Child[] {
   const rows = db
     .prepare(
       `SELECT id, display_name, birth_year, grade, age_band, institution_id, class_id,
-              subjects_json, priority_subject, avatar_seed
+              subjects_json, priority_subject, avatar_seed, kind, leaderboard_hidden
        FROM children WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at`,
     )
     .all(parentId) as ChildRow[];
@@ -170,7 +174,8 @@ app.post("/api/children", requireParent, async (c) => {
   if (count.n >= MAX_CHILDREN) throw forbidden("max_children", `Limite de ${MAX_CHILDREN} perfis por conta.`);
 
   const age = ageFromBirthYear(body.birth_year);
-  if (age < MIN_AGE) throw unprocessable("too_young", "No P1, o BearMinds atende a partir de 8 anos.");
+  if (age < MIN_AGE) throw unprocessable("too_young", `O BearMinds atende estudantes a partir de ${MIN_AGE} anos.`);
+  if (age > MAX_AGE) throw unprocessable("age_range", `O BearMinds atende estudantes de ${MIN_AGE} a ${MAX_AGE} anos.`);
   const age_band = ageBandFromAge(age);
 
   // Gate LGPD: os consentimentos obrigatórios devem vir concedidos (spec 03 §3.3).
@@ -213,6 +218,85 @@ app.post("/api/children", requireParent, async (c) => {
   setActiveChild(c.get("sessionId"), childId);
   audit(`parent:${parentId}`, "child_create", `child:${childId}`, { age_band });
   return c.json(buildMe(parentId, childId), 201);
+});
+
+// ---------- POST /api/me/self-profile (spec 12.1: o titular estuda) ----------
+const selfSchema = z.object({
+  display_name: z.string().trim().min(1).max(40).optional(),
+  birth_year: z.number().int().gte(1990).lte(new Date().getFullYear()),
+  grade: z.string().trim().min(2).max(8),
+  institution_id: z.string().max(60).nullish(),
+  class_id: z.string().max(30).nullish(),
+  subjects: z.array(z.string().max(40)).max(20).optional(),
+  priority_subject: z.string().max(40).nullish(),
+});
+
+app.post("/api/me/self-profile", requireParent, async (c) => {
+  const parentId = c.get("parentId");
+  const body = await readJson(c, selfSchema);
+
+  const selfExists = db
+    .prepare("SELECT id FROM children WHERE parent_id = ? AND kind = 'self' AND deleted_at IS NULL")
+    .get(parentId);
+  if (selfExists) throw conflict("self_exists", "Você já tem um perfil de estudos próprio.");
+
+  const count = db
+    .prepare("SELECT COUNT(*) n FROM children WHERE parent_id = ? AND deleted_at IS NULL")
+    .get(parentId) as { n: number };
+  if (count.n >= MAX_CHILDREN) throw forbidden("max_children", `Limite de ${MAX_CHILDREN} perfis por conta.`);
+
+  const age = ageFromBirthYear(body.birth_year);
+  if (age < MIN_AGE || age > MAX_AGE) {
+    throw unprocessable("age_range", `O BearMinds atende estudantes de ${MIN_AGE} a ${MAX_AGE} anos.`);
+  }
+  const age_band = ageBandFromAge(age);
+
+  if (body.institution_id) {
+    const inst = db.prepare("SELECT id FROM institutions WHERE id = ? AND active = 1").get(body.institution_id);
+    if (!inst) throw badRequest("bad_institution", "Instituição inválida.");
+    if (!body.class_id) throw badRequest("bad_class", "Selecione a turma da instituição.");
+  }
+
+  const childId = newId();
+  db.transaction(() => {
+    db.prepare(
+      `INSERT INTO children (id, parent_id, display_name, birth_year, grade, age_band,
+         institution_id, class_id, subjects_json, priority_subject, kind, created_at)
+       VALUES (@id,@parent_id,@display_name,@birth_year,@grade,@age_band,
+         @institution_id,@class_id,@subjects_json,@priority_subject,'self',@created_at)`,
+    ).run({
+      id: childId,
+      parent_id: parentId,
+      display_name: body.display_name ?? "Estudante",
+      birth_year: body.birth_year,
+      grade: body.grade,
+      age_band,
+      institution_id: body.institution_id ?? null,
+      class_id: body.class_id ?? null,
+      subjects_json: body.subjects ? JSON.stringify(body.subjects) : null,
+      priority_subject: body.priority_subject ?? null,
+      created_at: nowIso(),
+    });
+    // Self-consent: o próprio titular consente pelos escopos obrigatórios (spec 12.1).
+    for (const s of REQUIRED_CONSENTS) grantConsent(parentId, childId, s);
+  })();
+
+  setActiveChild(c.get("sessionId"), childId);
+  audit(`parent:${parentId}`, "self_profile_create", `child:${childId}`, { age_band });
+  return c.json(buildMe(parentId, childId), 201);
+});
+
+// ---------- POST /api/me/leaderboard-visibility (spec 12.4: opt-out) ----------
+app.post("/api/me/leaderboard-visibility", requireParent, async (c) => {
+  const parentId = c.get("parentId");
+  const { child_id, hidden } = await readJson(
+    c,
+    z.object({ child_id: z.string().min(1), hidden: z.boolean() }),
+  );
+  ownChildOrThrow(parentId, child_id);
+  db.prepare("UPDATE children SET leaderboard_hidden = ? WHERE id = ?").run(hidden ? 1 : 0, child_id);
+  audit(`parent:${parentId}`, "leaderboard_visibility", `child:${child_id}`, { hidden });
+  return c.json(buildMe(parentId, c.get("activeChildId")));
 });
 
 // ---------- POST /api/consents ----------

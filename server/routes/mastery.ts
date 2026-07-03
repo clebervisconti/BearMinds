@@ -6,7 +6,7 @@ import { requireParent, csrfGuard, ownChildOrThrow, hasConsent } from "../lib/se
 import { readJson, forbidden, notFound, type AppEnv } from "../lib/http.ts";
 import { reviewAtom } from "../mastery/fsrs.ts";
 import { buildTodayQueue, provaCountdowns, examClampForCode } from "../mastery/today.ts";
-import { recordLearningEvent, currentStreak } from "../gamify.ts";
+import { recordLearningEvent, currentStreak, processReviewRewards } from "../gamify.ts";
 import { audit } from "../lib/audit.ts";
 import type { AgeBand, TodayResponse } from "../../shared/contracts.ts";
 
@@ -52,12 +52,17 @@ app.post("/api/mastery/review", requireParent, async (c) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(newId(), child_id, atom.bncc_code, atom_id, nowIso(), nowIso(), duration_sec ?? null, rating);
 
+  // Moedas + conquistas (spec 12.3) — nascem só de eventos de aprendizagem reais.
+  const rewards = processReviewRewards(parentId, child_id, atom_id, rating, result);
+
   return c.json({
     due: result.due,
     state: result.state,
     retrievability: result.retrievability,
     counted_as_learning_event: counted,
     streak: currentStreak(child_id),
+    coins_earned: rewards.coins,
+    achievements_unlocked: rewards.unlocked,
   });
 });
 

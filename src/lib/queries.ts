@@ -35,6 +35,39 @@ export function useParentSummary(childId: string | null) {
   });
 }
 
+export function useNotifications(childId: string | null) {
+  return useQuery({
+    queryKey: ["notifications", childId],
+    queryFn: () => api.notifications(childId!),
+    enabled: !!childId,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useCoins(childId: string | null) {
+  return useQuery({
+    queryKey: ["coins", childId],
+    queryFn: () => api.coins(childId!),
+    enabled: !!childId,
+  });
+}
+
+export function useLeaderboard(childId: string | null) {
+  return useQuery({
+    queryKey: ["leaderboard", childId],
+    queryFn: () => api.leaderboard(childId!),
+    enabled: !!childId,
+  });
+}
+
+export function useCommunityPosts(childId: string | null, subject?: string) {
+  return useQuery({
+    queryKey: ["community", childId, subject ?? ""],
+    queryFn: () => api.communityPosts(childId!, subject),
+    enabled: !!childId,
+  });
+}
+
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({

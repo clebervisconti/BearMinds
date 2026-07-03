@@ -106,6 +106,7 @@ export interface TopicCandidate {
 }
 
 // ---------- Auth / perfis ----------
+export type ProfileKind = "self" | "child";
 export interface Child {
   id: string;
   display_name: string;
@@ -117,6 +118,8 @@ export interface Child {
   subjects: string[];
   priority_subject: string | null;
   avatar_seed: string | null;
+  kind: ProfileKind;
+  leaderboard_hidden: boolean;
 }
 export interface ConsentState {
   scope: ConsentScope;
@@ -160,6 +163,53 @@ export interface ParentSummary {
   week: { active_days: number; reviews: number; streak: number };
   provas: { title: string; date: string; readiness: number; days_left: number }[];
   mastery_by_subject: { subject_id: string; remembered: number; reviewing: number; total: number }[];
+}
+
+// ---------- Plataforma v2 (spec 12) ----------
+export interface AppNotification {
+  id: string | null; // null = derivada (não persistida)
+  kind: "achievement" | "reply" | "system" | "reviews_due" | "prova_soon";
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  derived: boolean;
+  at: string;
+}
+
+export interface CoinState {
+  balance: number;
+  week: number;
+  ledger: { delta: number; reason: string; created_at: string }[];
+  achievements: { code: string; unlocked_at: string }[];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  display_name: string; // apelido apenas (minimização)
+  coins: number;
+  me: boolean;
+}
+export interface LeaderboardResponse {
+  institution: string;
+  entries: LeaderboardEntry[];
+  me: { rank: number | null; coins: number };
+}
+
+export interface CommunityPost {
+  id: string;
+  subject_id: string | null;
+  title: string;
+  body: string;
+  created_at: string;
+  author: string; // apelido
+  replies?: number;
+}
+export interface CommunityReply {
+  id: string;
+  body: string;
+  created_at: string;
+  author: string; // apelido
 }
 
 // ---------- Erros ----------

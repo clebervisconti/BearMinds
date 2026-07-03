@@ -1,27 +1,46 @@
 /* ============================================================
-   BearMinds — Skins por faixa etária (spec 05 §5.2).
-   Um só JSON de conteúdo + troca de tokens = 3 experiências.
-   O <html data-skin="8-10|11-14|15-18"> controla o tema.
+   BearMinds — Skins (specs 05 §5.2 + 12).
+   Shell = skin "formal" (padrão, para toda a plataforma).
+   Skins infantis (8-10 / 11-14) só DENTRO da Aula de perfis child
+   (aplicadas num wrapper local, não no <html>).
    ============================================================ */
 
 :root {
-  --bm-radius: 16px;
+  --bm-radius: 12px;
   --bm-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* fallback = 11-14 */
-  --bm-bg: #f7f8fc;
+  /* fallback = formal */
+  --bm-bg: #f6f7fb;
   --bm-surface: #ffffff;
-  --bm-surface-2: #eef1fa;
-  --bm-ink: #1a1e2b;
-  --bm-muted: #6b7280;
-  --bm-primary: #6366f1;
+  --bm-surface-2: #eef0f7;
+  --bm-ink: #1c2333;
+  --bm-muted: #64708a;
+  --bm-primary: #3f51b5;
   --bm-primary-ink: #ffffff;
-  --bm-accent: #34c77b;
-  --bm-success: #22c55e;
-  --bm-warn: #f59e0b;
-  --bm-danger: #ef4444;
-  --bm-border: #e4e7f2;
+  --bm-accent: #2e9e6b;
+  --bm-success: #22a35e;
+  --bm-warn: #d98a0b;
+  --bm-danger: #d64545;
+  --bm-border: #e2e6f0;
 
+  --bm-scale: 1;
+}
+
+/* FORMAL (spec 12) — acadêmico calmo: indigo/slate, espaço generoso, sem ruído */
+[data-skin="formal"] {
+  --bm-radius: 12px;
+  --bm-bg: #f6f7fb;
+  --bm-surface: #ffffff;
+  --bm-surface-2: #eef0f7;
+  --bm-ink: #1c2333;
+  --bm-muted: #64708a;
+  --bm-primary: #3f51b5;
+  --bm-primary-ink: #ffffff;
+  --bm-accent: #2e9e6b;
+  --bm-success: #22a35e;
+  --bm-warn: #d98a0b;
+  --bm-danger: #d64545;
+  --bm-border: #e2e6f0;
   --bm-scale: 1;
 }
 

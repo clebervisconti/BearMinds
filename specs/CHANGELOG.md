@@ -1,5 +1,21 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-03 — Platform redesign (spec 12): plataforma para estudantes 6–19
+
+- **Pivô de produto (decisão do owner):** de app infantil parent-fronted para plataforma de estudos
+  (Moodle/Mindtickle-like) para estudantes **6–19**. Novo spec: `12-platform.md`.
+- **Conta owner-fronted:** o titular pode estudar (perfil `kind:'self'`, self-consent) e/ou criar perfis
+  filho (fluxo LGPD art. 14 inalterado). SUPERSEDE spec 03 §3.4 (MIN_AGE 8→6; 6–7 clampa na banda '8-10').
+- **Leaderboard POR INSTITUIÇÃO** (decisão do owner, 2026-07-03): SUPERSEDE o item "AVOID competitive
+  leaderboards between children" do spec 07. Salvaguardas: apelido apenas, opt-out por perfil
+  (`leaderboard_hidden`), top 20 + posição própria, nunca punitivo.
+- **Comunidade aberta a todos os perfis** (decisão do owner) com salvaguardas: escopo por instituição,
+  texto puro, sem DMs, apelido apenas, denúncia (`flagged`).
+- **Shell formal** (skin `formal` padrão); skins infantis mantidas SÓ dentro da Aula de perfis child.
+- Migração v2 (aditiva): `children.kind` + `children.leaderboard_hidden`, `notifications`, `coin_ledger`,
+  `achievements`, `community_posts`, `community_replies`.
+- Nenhum guardrail do spec 05 (grounding/answer-withholding/sandbox) foi alterado.
+
 Registro datado de onde a implementação divergiu das specs (regra do 11-roadmap).
 
 ## 2026-07-02 — Upgrade P1 (static v0 → produto PWA + API)

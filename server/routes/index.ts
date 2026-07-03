@@ -10,6 +10,9 @@ import generateRoutes from "./generate.ts";
 import masteryRoutes from "./mastery.ts";
 import parentRoutes from "./parent.ts";
 import meRoutes from "./me.ts";
+import notificationRoutes from "./notifications.ts";
+import gamificationRoutes from "./gamification.ts";
+import communityRoutes from "./community.ts";
 
 // Registro central de rotas. Cada spec adiciona seu módulo aqui.
 export function mountRoutes(app: Hono<AppEnv>) {
@@ -31,4 +34,7 @@ export function mountRoutes(app: Hono<AppEnv>) {
   app.route("/", generateRoutes);
   app.route("/", masteryRoutes);
   app.route("/", parentRoutes);
+  app.route("/", notificationRoutes);
+  app.route("/", gamificationRoutes);
+  app.route("/", communityRoutes);
 }

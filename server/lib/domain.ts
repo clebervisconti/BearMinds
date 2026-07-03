@@ -2,8 +2,9 @@ import type { AgeBand, ConsentScope } from "../../shared/contracts.ts";
 
 export const REQUIRED_CONSENTS: ConsentScope[] = ["account", "ai_generation", "progress_tracking"];
 export const ALL_CONSENTS: ConsentScope[] = [...REQUIRED_CONSENTS, "email_updates"];
-export const MAX_CHILDREN = 4;
-export const MIN_AGE = 8; // MEC desencoraja IA na primeira infância (spec 03 §3.4)
+export const MAX_CHILDREN = 5; // total de perfis por conta (1 'self' + filhos) — spec 12
+export const MIN_AGE = 6; // faixa-alvo 6–19 (spec 12; supersede spec 03 §3.4)
+export const MAX_AGE = 19;
 
 export function ageFromBirthYear(birthYear: number, now = new Date()): number {
   return now.getFullYear() - birthYear;
