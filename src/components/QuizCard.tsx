@@ -1,16 +1,9 @@
 import { useState } from "react";
 import type { QuizQuestion } from "../../shared/contracts";
+import { ratingFrom } from "../../shared/rating";
 
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-
-// Rating FSRS derivado do desempenho (spec 06.1).
-function ratingFrom(hintsUsed: number, wrongTries: number, elapsedMs: number, gaveUp: boolean): 1 | 2 | 3 | 4 {
-  if (gaveUp) return 1;
-  if (hintsUsed === 0 && wrongTries === 0 && elapsedMs < 20000) return 4;
-  if (hintsUsed <= 1 && wrongTries <= 1) return 3;
-  return 2;
-}
 
 export function QuizCard({ q, index, total, onDone }: {
   q: QuizQuestion;
