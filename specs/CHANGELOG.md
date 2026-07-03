@@ -36,7 +36,19 @@ Registro datado de onde a implementação divergiu das specs (regra do 11-roadma
 - **10** `scripts/deploy.sh` (build→rsync→restart→health gate→rollback) + `bearminds-api.service` + `DEPLOY.md`.
 - Verificado: `tsc` limpo, `vite build` ok (78 KB gzip), **17 testes vitest verdes**, smoke E2E do backend (31 checks) e walkthrough do PWA no preview (register→consent→onboarding→lição→explorável→quiz).
 
-### Pendências (não-P1 / requerem VPS)
-- Cutover para servir o novo `dist/` (decisão a registrar em 11-roadmap) — produção ainda serve o app legado.
-- Setup do Node 24 + systemd + OLS reverse proxy no VPS (via `hostgator-vps-manager`).
+### Cutover — GATED DEPLOY (LIVE em 2026-07-03)
+O produto está no VPS, atrás do Cloudflare Access (só Cleber acessa, via OTP por e-mail):
+- **Node 24.18.0** em `/usr/local/node24` (isolado; system node 20 intacto). `node:sqlite` OK.
+- App em `/home/bearminds.cybersphere.com.br/app` (rsync do source → `npm ci` → build → seed). `.env` 0600 (secrets gerados; `GEMINI_API_KEY` injetado ⇒ geração completa).
+- **systemd `bearminds-api`** (User=bearm4935, `HOST=127.0.0.1:8787`, enable+start). Cold start ~40s (tsx transpila no boot).
+- **OLS**: `public_html` = `dist/` (snapshot do legado em `/home/backups/bearminds/`); `/api` via `.htaccess [P]` + extprocessor `127.0.0.1:8787` no vhost.conf. clebervisconti.com verificado intacto.
+- **Cloudflare Access** app `15f2a97f-03cc-4244-9124-96986f0b4678` (policy allow `cleber.visconti@icloud.com`). Público → 302 p/ `clebervisconti.cloudflareaccess.com`.
+- Verificado: health via proxy, GET+POST via proxy, CSP header, gate público 302.
+
+**Para tornar PÚBLICO** (fim da validação): remover/relaxar a policy do Access app `15f2a97f…`.
+**Rollback do cutover**: restaurar `public_html` do snapshot em `/home/backups/bearminds/<ts>/public_html` + `lswsctrl reload`.
+
+### Pendências
+- Validação humana E2E logando via OTP (só Cleber consegue).
 - Corpus além de Matemática e explorables gerados por LLM (só o exemplar é hand-verified no P1).
+- Opcional: pré-compilar TS→JS p/ restart rápido; cron do `scripts/deploy.sh` + `jobs:nightly` no VPS.

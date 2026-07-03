@@ -45,9 +45,9 @@ echo "▶ Migrações (bootstrap) + restart da API"
 # o schema sobe no boot da API (idempotente); systemd mantém Restart=always
 sudo systemctl restart "$SERVICE"
 
-echo "▶ Health gate"
-for i in 1 2 3 4 5; do
-  sleep 2
+echo "▶ Health gate (a API sobe via tsx — cold start pode levar ~40s)"
+for i in $(seq 1 30); do
+  sleep 3
   if curl -fsS "$HEALTH_URL" | grep -q '"ok":true'; then
     echo "✅ Deploy OK: $(curl -fsS "$HEALTH_URL")"
     exit 0

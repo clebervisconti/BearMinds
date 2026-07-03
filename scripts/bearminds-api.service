@@ -10,8 +10,9 @@ Type=simple
 User=bearm4935
 WorkingDirectory=/home/bearminds.cybersphere.com.br/app
 EnvironmentFile=/home/bearminds.cybersphere.com.br/app/.env
-# Node 24 LTS (node:sqlite estável). tsx roda o TS direto; alternativa: pré-compilar.
-ExecStart=/usr/bin/env node --import tsx/esm server/index.ts
+# Node 24 LTS instalado em /usr/local/node24 (node:sqlite estável). tsx roda o TS direto
+# (cold start ~40s — pré-compilar para JS se precisar de restart rápido).
+ExecStart=/usr/local/node24/bin/node --import tsx/esm server/index.ts
 Restart=always
 RestartSec=3
 # firewall: 8787 só em localhost (OLS faz reverse proxy). Nunca expor publicamente.

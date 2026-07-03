@@ -38,10 +38,33 @@ PUBLIC_ORIGIN=https://bearminds.cybersphere.com.br
 
 ## 2. OpenLiteSpeed (via hostgator-vps-manager)
 
-- **Docroot** do vhost → `…/app/dist/` (serve o PWA estático).
-- **Context `/api/`** → reverse proxy para `http://127.0.0.1:8787` (WebSocket off).
-- **Let's Encrypt** já gerenciado pelo CyberPanel.
-- **Firewalld:** 8787 NÃO exposto (só localhost). A API só é alcançável via proxy.
+Config **realmente aplicada** (docroot = `public_html`, `autoLoadHtaccess 1`):
+
+- **dist/ → public_html:** `rsync -a --delete app/dist/ public_html/` (o cutover; snapshot antes).
+- **Reverse proxy `/api`:** o OLS exige um *external app* nomeado com o alvo do `[P]`. Duas partes:
+  1. No `vhost.conf`, um extprocessor:
+     ```
+     extprocessor 127.0.0.1:8787 {
+       type      proxy
+       address   127.0.0.1:8787
+       maxConns  100
+       initTimeout 60
+       retryTimeout 0
+       respBuffer 0
+     }
+     ```
+  2. Em `public_html/.htaccess`:
+     ```
+     RewriteEngine On
+     RewriteRule ^api/(.*)$ http://127.0.0.1:8787/api/$1 [P,L]
+     RewriteCond %{REQUEST_FILENAME} !-f
+     RewriteCond %{REQUEST_FILENAME} !-d
+     RewriteRule ^ /index.html [L]
+     ```
+  > Sem o extprocessor nomeado, o `[P]` devolve **500** ("Proxy target is not defined on external application list").
+- Editar `vhost.conf` afeta só este vhost, mas **faça backup e verifique clebervisconti.com** após `lswsctrl reload` (box compartilhado). Rollback = restaurar o backup + reload.
+- **Let's Encrypt** já gerenciado pelo CyberPanel. O `context /.well-known/acme-challenge` do vhost fica fora do docroot — a renovação segue funcionando. (Se o gate do Cloudflare Access ficar muito tempo, garanta a renovação do cert origin p/ o SSL Full-strict.)
+- **Firewalld:** 8787 NÃO exposto (só localhost + bind `HOST=127.0.0.1`). A API só é alcançável via proxy.
 - **Headers para o estático** (o Node já os envia na API; para o dist/, adicionar no vhost/`.htaccess`):
   ```
   Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
