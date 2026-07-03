@@ -64,6 +64,22 @@ export const env = {
   // E-mail (opcional)
   smtpUrl: process.env.SMTP_URL || "",
   emailFrom: process.env.EMAIL_FROM || "BearMinds <no-reply@bearminds.cybersphere.com.br>",
+
+  // Gate de validação por Sign in with Apple (substitui o Cloudflare Access OTP).
+  // GATE_MODE=apple liga; vazio/"off" desliga (produto público usa só a auth de parent).
+  gateMode: process.env.GATE_MODE || "off",
+  appleClientId: process.env.APPLE_CLIENT_ID || "com.cybersphere.bearminds.signin", // Services ID
+  appleTeamId: process.env.APPLE_TEAM_ID || "Z5H2FL2237",
+  appleKeyId: process.env.APPLE_KEY_ID || "",
+  applePrivateKeyPath: process.env.APPLE_PRIVATE_KEY_PATH || "",
+  appleRedirectUri:
+    process.env.APPLE_REDIRECT_URI || "https://bearminds.cybersphere.com.br/api/auth/apple/callback",
+  gateAllowlist: (process.env.GATE_ALLOWLIST || "cleber.visconti@icloud.com")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  gateCookieSecret:
+    process.env.GATE_COOKIE_SECRET || required("GATE_COOKIE_SECRET", () => randomBytes(16).toString("hex")),
 };
 
 export const llmConfigured = Boolean(env.geminiApiKey || env.anthropicApiKey);

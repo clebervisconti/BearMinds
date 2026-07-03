@@ -92,8 +92,40 @@ Cron sugerido (crontab do usuário do site):
 ```
 (retenção de backups: 14 dias; material de chave NÃO vai no backup.)
 
-## 4. Gate de testes enquanto valida
-Cloudflare Access na frente do hostname até o lançamento da coorte-piloto (remover para público).
+## 4. Gate de validação — Sign in with Apple (substitui o Cloudflare Access OTP)
+
+Gate por SIWA (allowlist), no app (padrão dos outros apps do Cleber). Ativa com `GATE_MODE=apple`.
+Feito via API: **App ID `com.cybersphere.bearminds` (id A4P34RAX77) + capability Sign in with Apple**.
+
+**Portal-only (Apple não tem API — Cleber faz, ~5 min):**
+1. **Identifiers → Services IDs → +** → `com.cybersphere.bearminds.signin` (desc "BearMinds SignIn").
+2. Editar o Services ID → habilitar **Sign in with Apple → Configure**:
+   - Primary App ID: `com.cybersphere.bearminds`
+   - Domains: `bearminds.cybersphere.com.br`  ·  Return URLs: `https://bearminds.cybersphere.com.br/api/auth/apple/callback`
+   - Apple gera um **domain association file** → me passe o conteúdo; eu hospedo em `/.well-known/apple-developer-domain-association.txt` (o gate libera `/.well-known/`).
+3. **Keys → +** → nome "BearMinds SIWA" → habilitar **Sign in with Apple → Configure** → Primary App ID `com.cybersphere.bearminds` → **Register** → **Download `.p8` (uma vez!)** → salvar em `~/.private_keys/AuthKey_<KEYID>.p8` (0600). Anotar o **Key ID**.
+4. Me entregue o **Key ID** (o `.p8` fica só no seu Mac / VPS, nunca no git).
+
+**Depois (eu faço):** copio o `.p8` p/ o VPS (`/var/lib/bearminds/apple-signin-key.p8`, 0600, owner bearm4935),
+preencho o `.env`:
+```
+GATE_MODE=apple
+APPLE_CLIENT_ID=com.cybersphere.bearminds.signin
+APPLE_TEAM_ID=Z5H2FL2237
+APPLE_KEY_ID=<key id>
+APPLE_PRIVATE_KEY_PATH=/var/lib/bearminds/apple-signin-key.p8
+APPLE_REDIRECT_URI=https://bearminds.cybersphere.com.br/api/auth/apple/callback
+GATE_ALLOWLIST=cleber.visconti@icloud.com
+GATE_COOKIE_SECRET=<openssl rand -hex 16>
+```
+e **mudo o OLS p/ mandar TUDO ao Node** (o gate precisa cobrir o estático):
+`RewriteRule ^(.*)$ http://127.0.0.1:8787/$1 [P,L]` no `.htaccess` (o Node serve dist + api quando prod).
+Então **removo o Cloudflare Access** app `15f2a97f…` e testo o fluxo Apple.
+
+Rollback do gate: `GATE_MODE=off` + restart → volta a exigir só a auth de parent (produto público).
+
+### Cloudflare Access (mecanismo anterior — a remover no cutover do Apple)
+Enquanto o SIWA não sobe, o hostname segue atrás do Cloudflare Access (app `15f2a97f…`, OTP).
 
 ## 5. Cutover (fim do P1)
 A raiz passa a servir o novo `dist/`. O app legado (`legacy/`) fica acessível em `/legacy/` para referência

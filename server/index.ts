@@ -10,6 +10,7 @@ import { initDb } from "./db.ts";
 import { mountRoutes } from "./routes/index.ts";
 import { appVersion } from "./version.ts";
 import { AppError, type AppEnv } from "./lib/http.ts";
+import { gateMiddleware, mountGate, gateEnabled } from "./lib/gate.ts";
 
 // 1) Sobe o schema do SQLite (idempotente) antes de aceitar tráfego.
 initDb();
@@ -26,6 +27,10 @@ app.onError((err, c) => {
 });
 
 app.notFound((c) => c.json({ error: { code: "not_found", message: "Rota não encontrada." } }, 404));
+
+// Gate de validação (Sign in with Apple) — ANTES de tudo. Inerte se GATE_MODE != apple.
+mountGate(app);
+app.use("*", gateMiddleware);
 
 // 2) Rotas da API + headers de segurança.
 mountRoutes(app);
@@ -50,7 +55,7 @@ if (serveDist) {
 
 serve({ fetch: app.fetch, port: env.port, hostname: process.env.HOST || undefined }, (info) => {
   logger.info(
-    { port: info.port, version: appVersion, env: env.isProd ? "prod" : "dev", serveDist },
+    { port: info.port, version: appVersion, env: env.isProd ? "prod" : "dev", serveDist, gate: gateEnabled() ? "apple" : "off" },
     `BearMinds API on :${info.port}`,
   );
 });
