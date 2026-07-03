@@ -1,0 +1,26 @@
+# systemd unit da API BearMinds (spec 10.2). Copiar para /etc/systemd/system/ e:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now bearminds-api
+[Unit]
+Description=BearMinds API (Hono/Node)
+After=network.target
+
+[Service]
+Type=simple
+# usuário do site (NUNCA root)
+User=bearm4935
+WorkingDirectory=/home/bearminds.cybersphere.com.br/app
+EnvironmentFile=/home/bearminds.cybersphere.com.br/app/.env
+# Node 24 LTS (node:sqlite estável). tsx roda o TS direto; alternativa: pré-compilar.
+ExecStart=/usr/bin/env node --import tsx/esm server/index.ts
+Restart=always
+RestartSec=3
+# firewall: 8787 só em localhost (OLS faz reverse proxy). Nunca expor publicamente.
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+# hardening
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -4,11 +4,18 @@
 // API estilo better-sqlite3 (prepare/run/get/all + pragma + transaction). Motivo:
 // better-sqlite3 (nativo) não compila contra o V8 do Node 26. node:sqlite não tem
 // build nativo — mais robusto no dev e no deploy. Ver specs/CHANGELOG.md.
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync as DatabaseSyncType } from "node:sqlite";
+import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { nanoid } from "nanoid";
 import { env } from "./env.ts";
+
+// Carrega o builtin via require em runtime (opaco ao transform do Vite/Vitest, que ainda
+// não reconhece `node:sqlite`). O import type acima é apagado na compilação.
+const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as {
+  DatabaseSync: typeof DatabaseSyncType;
+};
 
 mkdirSync(dirname(env.databasePath), { recursive: true });
 
