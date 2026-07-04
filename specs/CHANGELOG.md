@@ -1,5 +1,24 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-04 — IA migrada do Gemini API para Gemma local (MLX no HULK)
+
+- **Toda a IA do BearMinds** (decompose, resolve, lição, explorável, quiz, math-check, pré-análise de tarefas)
+  passa a usar **`mlx-community/gemma-3-4b-it-4bit`** rodando via `mlx_lm server` no HULK (Mac mini), em vez do Gemini API.
+- **Driver novo** `OpenAICompatDriver` (`server/llm/provider.ts`): fala o endpoint OpenAI-compatible do MLX
+  (`/v1/chat/completions`), sem SDK. Casa modelos `mlx-*`/`gemma`/`local-*`. Auth opcional: Bearer ou **Cloudflare
+  Access service token** (headers `CF-Access-Client-Id`/`Secret`). Env: `LLM_BASE_URL`, `LLM_API_KEY`,
+  `LLM_CF_ACCESS_CLIENT_ID/SECRET`, `LLM_TIMEOUT_MS`. `MODEL_*` default = gemma. `llmConfigured` passa a valer p/ endpoint local.
+- **Conectividade prod (VPS→HULK):** o Gemma já era exposto pelo túnel Cloudflare `agentos` em
+  `mlx.cybersphere.com.br → localhost:8081`, protegido por **Cloudflare Access** (não-aberto). Criado um service
+  token dedicado **`bearminds-gemma`** e adicionado à política da app (sem afetar o llmviz). O `.env` do VPS aponta
+  `LLM_BASE_URL=https://mlx.cybersphere.com.br/v1` + os headers do token; `GEMINI_API_KEY` comentado.
+- **Guardrails (05) inalterados** — grounding, answer-withholding, math-check continuam; só o backend do modelo mudou.
+  `parseJSON` já trata as cercas ```json que o Gemma às vezes devolve.
+- **Trade-off aceito pelo owner:** gemma-3-4b-it-4bit é bem menor que o gemini-2.5-flash (qualidade/consistência de
+  JSON menor) e a IA passa a depender do HULK+túnel estarem no ar (mlx-watchdog mantém o Gemma vivo). Sem fallback cloud.
+- Verificado: tsc/build/76 testes verdes (testes offline via `LLM_BASE_URL=""`), chamada real em produção
+  (VPS→Cloudflare→HULK) retornou resposta do Gemma (~1.1s).
+
 ## 2026-07-04 — Tema CYBERSPHERE Design System (light) aplicado à plataforma inteira
 
 - **Fonte da verdade:** skill `cs-branding` (o projeto claude.ai/design não é acessível em sessão headless
