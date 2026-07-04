@@ -56,9 +56,13 @@ export function Admin() {
             {overview?.institution_id ? ` · ${overview.institution_id}` : ""}
           </div>
         </div>
-        <div style={{ display: "flex", gap: ".5rem" }}>
+        <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
+          <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav("/admin/coaching")}>🎯 Coaching</button>
           {(role === "institution_admin" || role === "platform_admin") && (
-            <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav("/admin/pessoas")}>👥 Pessoas & convites</button>
+            <>
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav("/admin/moderacao")}>🛡 Moderação</button>
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav("/admin/pessoas")}>👥 Pessoas & convites</button>
+            </>
           )}
           <button className="bm-btn bm-btn-sm" onClick={() => setCreating((v) => !v)}>{creating ? "Fechar" : "+ Novo curso"}</button>
         </div>

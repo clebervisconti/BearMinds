@@ -1,5 +1,30 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-04 — P4b/P4c: aprendizagem ao vivo & social (spec 14) — Kahoot, Slido, chat, coaching, certificados, moderação
+
+- **Novo spec `14-live-social.md`** e **`11-roadmap.md` reconciliado** (P1→redesign→P4a→P4b/P4c entregues; P5/P6 futuros).
+- **Live games (Kahoot, 14.1):** sessão por PIN a partir de um item de quiz publicado; host controla o ritmo
+  (lobby → pergunta → revelar → pódio); pontuação `base 600 + bônus de velocidade até 400` (`server/live/scoring.ts`,
+  puro/testável); estado por **polling** (decisão do owner) que **nunca revela a resposta antes do reveal**;
+  moedas de participação no fim. Console do professor `/admin/live/:itemId`; jogo do aluno `/live` (PIN → responder
+  cronometrado → pódio).
+- **Enquetes & Q&A (Slido, 14.2):** enquetes com apuração ao vivo (um voto por aluno, `INSERT OR REPLACE`);
+  Q&A com upvote, ordenado por `answered ASC, votes DESC`; staff cria enquete e marca respondida.
+- **Chat (14.3):** canal por curso (aluno+staff) **+ DM privada estudante↔staff** — **nunca aluno↔aluno**
+  (thread do aluno sempre aponta para o staff criador do curso; caixa de entrada do staff em `/admin/coaching`).
+- **Coaching/tutoria (14.4):** painel de alunos **em risco** (streak quebrado / prontidão < 60% / inativo 7d+,
+  `riskFlags` puro), anotações de acompanhamento, DM.
+- **Certificados (14.5):** emitidos na conclusão do curso; **verificação PÚBLICA** `/certificado/:code`
+  (sem PII sensível — apelido + curso + instituição + data). Listados em Conquistas.
+- **Moderação (14.6):** fila de conteúdo denunciado (`flagged`) com ocultar (`deleted_at`) / restaurar — institution_admin+.
+- Migração v4 (aditiva): `live_sessions`, `live_players`, `live_answers`, `polls`, `poll_votes`, `qa_questions`,
+  `qa_votes`, `chat_channels`, `chat_threads`, `chat_messages`, `tutor_notes`, `certificates` (+ índices).
+- **Reuso:** mesmo motor de quiz cacheado (grounding), FSRS/prontidão, moedas/streak, sessões/CSRF, AppShell/tokens.
+  Guardrails do spec 05 inalterados. Verificado: tsc/build verdes, **53 testes vitest** (+19: scoring, PIN, tally,
+  ordenação Q&A, chat sem aluno↔aluno, riskFlags, certificado sem PII, moderação), E2E no preview
+  (PIN entry autenticado, verificação pública, endpoints vazios limpos, guardian 403 em coaching/moderação/inbox).
+- **Futuro (P5/P6):** WebSockets no lugar do polling, vídeo self-hosted/HLS, PBL (Inteli), pagamento/retenção.
+
 ## 2026-07-04 — P4a: LMS (spec 13) — administração, professores e pipeline de conteúdo
 
 - **Novo spec `13-lms.md`:** papéis invite-only (guardian/professor/tutor/institution_admin/platform_admin),

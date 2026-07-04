@@ -9,11 +9,14 @@ export function Mais() {
   const notifs = useNotifications(child?.id ?? null);
   const unread = notifs.data?.unread ?? 0;
 
+  const isStaff = (me.data?.parent.role ?? "guardian") !== "guardian";
   const items = [
+    ...(!isStaff ? [{ to: "/live", icon: "📡", label: "Ao vivo", desc: "Entrar num jogo com um PIN" }] : []),
     { to: "/conquistas", icon: "◇", label: "Conquistas", desc: "Moedas, medalhas e ranking" },
     { to: "/notificacoes", icon: "◈", label: "Notificações", desc: unread > 0 ? `${unread} não lida${unread === 1 ? "" : "s"}` : "Tudo em dia" },
     { to: "/perfis", icon: "👥", label: "Perfis", desc: "Trocar quem está estudando" },
     { to: "/configuracoes", icon: "⚙", label: "Configurações", desc: "Conta, consentimentos e dados" },
+    ...(isStaff ? [{ to: "/admin", icon: "⚙", label: "Administração", desc: "Cursos, coaching e moderação" }] : []),
   ];
 
   return (

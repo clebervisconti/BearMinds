@@ -236,6 +236,17 @@ app.post("/api/learn/items/:id/progress", requireParent, async (c) => {
         db.prepare("UPDATE enrollments SET completed_at = COALESCE(completed_at, ?) WHERE child_id = ? AND course_id = ?").run(
           nowIso(), child_id, item.course_id,
         );
+        // Certificado (spec 14.5) — dedup por UNIQUE(child_id, course_id).
+        try {
+          const code = `BM-${newId().slice(0, 8).toUpperCase()}`;
+          db.prepare("INSERT INTO certificates (id, child_id, course_id, code, issued_at) VALUES (?, ?, ?, ?, ?)").run(
+            newId(), child_id, item.course_id, code, nowIso(),
+          );
+          db.prepare(
+            `INSERT INTO notifications (id, parent_id, child_id, kind, title, body, link, created_at)
+             VALUES (?, ?, ?, 'achievement', '📜 Certificado emitido!', 'Você concluiu um curso com maestria.', '/conquistas', ?)`,
+          ).run(newId(), parentId, child_id, nowIso());
+        } catch { /* já emitido */ }
       }
     }
   }

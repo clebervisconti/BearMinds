@@ -14,9 +14,15 @@ import { Configuracoes } from "./screens/Configuracoes";
 import { Mais } from "./screens/Mais";
 import { Aula } from "./screens/Aula";
 import { CursoPage } from "./screens/CursoPage";
+import { CursoInteragir } from "./screens/CursoInteragir";
+import { LivePlay } from "./screens/LivePlay";
+import { Certificado } from "./screens/Certificado";
 import { Admin } from "./screens/admin/Admin";
 import { AdminCurso } from "./screens/admin/AdminCurso";
 import { AdminPessoas } from "./screens/admin/AdminPessoas";
+import { AdminCoaching } from "./screens/admin/AdminCoaching";
+import { AdminModeracao } from "./screens/admin/AdminModeracao";
+import { LiveHost } from "./screens/admin/LiveHost";
 import { Convite } from "./screens/admin/Convite";
 import { PoliticaPrivacidade, Termos } from "./screens/Legal";
 
@@ -64,11 +70,18 @@ export function AppRouter() {
       <Route path="/mais" element={<Private><Mais /></Private>} />
       <Route path="/aula" element={<Private><Aula /></Private>} />
       <Route path="/curso/:id" element={<Private><CursoPage /></Private>} />
+      <Route path="/curso/:id/interagir" element={<Private needsChild={false}><CursoInteragir /></Private>} />
+      <Route path="/live" element={<Private><LivePlay /></Private>} />
 
+      <Route path="/certificado/:code" element={<Certificado />} />
       <Route path="/convite/:token" element={<Convite />} />
       <Route path="/admin" element={<Staff><Admin /></Staff>} />
       <Route path="/admin/curso/:id" element={<Staff><AdminCurso /></Staff>} />
+      <Route path="/admin/curso/:id/interagir" element={<Staff><CursoInteragir /></Staff>} />
+      <Route path="/admin/live/:itemId" element={<Staff><LiveHost /></Staff>} />
       <Route path="/admin/pessoas" element={<Staff><AdminPessoas /></Staff>} />
+      <Route path="/admin/coaching" element={<Staff><AdminCoaching /></Staff>} />
+      <Route path="/admin/moderacao" element={<Staff><AdminModeracao /></Staff>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

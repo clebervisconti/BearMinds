@@ -17,6 +17,11 @@ import adminRoutes from "./admin.ts";
 import authoringRoutes from "./authoring.ts";
 import enrichRoutes from "./enrich.ts";
 import learnRoutes from "./learn.ts";
+import liveRoutes from "./live.ts";
+import chatRoutes from "./chat.ts";
+import coachingRoutes from "./coaching.ts";
+import certificateRoutes from "./certificates.ts";
+import moderationRoutes from "./moderation.ts";
 
 // Registro central de rotas. Cada spec adiciona seu módulo aqui.
 export function mountRoutes(app: Hono<AppEnv>) {
@@ -45,4 +50,9 @@ export function mountRoutes(app: Hono<AppEnv>) {
   app.route("/", authoringRoutes);
   app.route("/", enrichRoutes);
   app.route("/", learnRoutes);
+  app.route("/", liveRoutes);
+  app.route("/", chatRoutes);
+  app.route("/", coachingRoutes);
+  app.route("/", certificateRoutes);
+  app.route("/", moderationRoutes);
 }

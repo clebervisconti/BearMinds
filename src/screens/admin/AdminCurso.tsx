@@ -82,7 +82,8 @@ export function AdminCurso() {
                 <div className="sub">{course.subject_id} · {course.class_id}{course.term ? ` · ${course.term}` : ""}{course.year ? ` · ${course.year}` : ""}</div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: ".5rem" }}>
+            <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${course.id}/interagir`, { state: { title: course.title } })}>💬 Interação</button>
               <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => setAssigning((v) => !v)}>🎓 Matricular alunos</button>
               <button className="bm-btn bm-btn-sm" onClick={togglePublish} style={published ? { background: "var(--bm-warn)" } : {}}>
                 {published ? "Despublicar" : "Publicar curso"}
@@ -139,11 +140,13 @@ export function AdminCurso() {
 function ItemRow({ item, onChanged, onPreview, previewOpen }: {
   item: AdminItem; onChanged: () => void; onPreview: () => void; previewOpen: boolean;
 }) {
+  const nav = useNavigate();
   const meta = KIND_META[item.kind] ?? { icon: "▫", label: item.kind };
   const [err, setErr] = useState<string | null>(null);
   const enrichBusy = item.enrich && ["queued", "running"].includes(item.enrich.status);
   const canEnrich = (item.kind === "lesson" || item.kind === "quiz") && !enrichBusy;
   const canApprove = item.status === "pending_review";
+  const canLive = item.kind === "quiz" && item.status === "published";
 
   async function run(fn: () => Promise<unknown>) {
     setErr(null);
@@ -175,6 +178,9 @@ function ItemRow({ item, onChanged, onPreview, previewOpen }: {
         )}
         {item.status === "draft" && (item.kind === "video" || item.kind === "document") && (
           <button className="bm-btn bm-btn-sm" onClick={() => run(() => api.adminApproveItem(item.id))}>Publicar</button>
+        )}
+        {canLive && (
+          <button className="bm-btn bm-btn-sm" style={{ background: "var(--bm-accent)" }} onClick={() => nav(`/admin/live/${item.id}`)}>📡 Ao vivo</button>
         )}
         <button className="bm-btn-quiet bm-btn-sm" onClick={() => { if (confirm("Excluir este item?")) void run(() => api.adminDeleteItem(item.id)); }} aria-label="Excluir">🗑</button>
       </div>

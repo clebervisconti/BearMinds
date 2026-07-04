@@ -47,6 +47,9 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
           </nav>
 
           <div className="bm-utils">
+            {me.data && me.data.parent.role === "guardian" && (
+              <Link to="/live" className="bm-chip bm-live-pill bm-hide-mobile" title="Entrar num jogo ao vivo">📡 Ao vivo</Link>
+            )}
             <span className="bm-chip bm-coins-chip" title="Moedas ganhas estudando">🪙 {coins.data?.balance ?? 0}</span>
             <Link to="/notificacoes" className="bm-iconbtn" aria-label={`Notificações${unread ? ` (${unread} não lidas)` : ""}`}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -109,6 +112,9 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
         .bm-nav-desktop{display:none}
         .bm-utils{margin-left:auto;display:flex;align-items:center;gap:.45rem}
         .bm-coins-chip{font-weight:650}
+        .bm-live-pill{text-decoration:none;font-weight:650;color:var(--bm-primary);
+          background:color-mix(in srgb,var(--bm-primary) 10%,transparent);border:1px solid color-mix(in srgb,var(--bm-primary) 24%,transparent)}
+        .bm-live-pill:hover{background:color-mix(in srgb,var(--bm-primary) 16%,transparent)}
         .bm-iconbtn{position:relative;display:grid;place-items:center;width:38px;height:38px;border-radius:10px;
           color:var(--bm-muted);text-decoration:none;transition:background .12s ease,color .12s ease}
         .bm-iconbtn:hover{background:var(--bm-surface-2);color:var(--bm-ink)}

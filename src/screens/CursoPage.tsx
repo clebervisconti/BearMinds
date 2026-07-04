@@ -83,6 +83,9 @@ export function CursoPage() {
               )}
             </div>
             {!data.enrolled && <button className="bm-btn" onClick={enroll}>Inscrever-se</button>}
+            {data.enrolled && (
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/curso/${id}/interagir`, { state: { title: data.course.title } })}>💬 Interação</button>
+            )}
             {data.completed_at && <span className="bm-chip" style={{ background: "color-mix(in srgb, var(--bm-success) 14%, transparent)", color: "var(--bm-success)", fontWeight: 700 }}>✓ Curso concluído</span>}
           </div>
 

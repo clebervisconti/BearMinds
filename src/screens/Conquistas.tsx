@@ -1,7 +1,10 @@
 // Conquistas (specs 12.3–12.4) — hero de moedas, medalhas e ranking da instituição
-// (rank pills coloridas no padrão da referência Olympus).
+// (rank pills coloridas no padrão da referência Olympus). Certificados (spec 14.5).
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { Avatar, BearLoader } from "../components/common";
+import { api } from "../lib/api";
 import { useMe, useCoins, useLeaderboard, activeChild } from "../lib/queries";
 
 const BADGES: { code: string; icon: string; label: string; hint: string }[] = [
@@ -68,6 +71,9 @@ export function Conquistas() {
               })}
             </div>
           </section>
+
+          {/* certificados */}
+          <CertList childId={child.id} />
 
           {/* extrato */}
           {(coins.data?.ledger ?? []).length > 0 && (
@@ -137,5 +143,28 @@ export function Conquistas() {
         }
       `}</style>
     </AppShell>
+  );
+}
+
+// Certificados conquistados (spec 14.5) — cada um leva à página pública de verificação.
+function CertList({ childId }: { childId: string }) {
+  const [certs, setCerts] = useState<{ code: string; issued_at: string; course_title: string; cover_emoji: string }[]>([]);
+  useEffect(() => { api.certificates(childId).then((r) => setCerts(r.certificates)).catch(() => setCerts([])); }, [childId]);
+  if (certs.length === 0) return null;
+  return (
+    <section>
+      <div className="bm-eyebrow" style={{ marginBottom: ".6rem" }}>Certificados</div>
+      <div style={{ display: "grid", gap: ".5rem" }}>
+        {certs.map((ct) => (
+          <Link key={ct.code} to={`/certificado/${ct.code}`} className="bm-card-flat" style={{ display: "flex", alignItems: "center", gap: ".8rem", padding: ".7rem .9rem", textDecoration: "none", color: "inherit" }}>
+            <span style={{ fontSize: "1.5rem" }} aria-hidden>{ct.cover_emoji || "📜"}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 620, fontSize: ".92rem" }}>{ct.course_title}</div>
+              <div className="bm-meta">Emitido em {new Date(ct.issued_at).toLocaleDateString("pt-BR")} · verificar ↗</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

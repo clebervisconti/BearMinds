@@ -177,7 +177,75 @@ export const api = {
   learnItemProgress: (item_id: string, child_id: string, status: "doing" | "done", score?: number) =>
     req<{ ok: true; module_completed: boolean; course_completed: boolean }>(
       "POST", `/learn/items/${encodeURIComponent(item_id)}/progress`, { child_id, status, score }),
+
+  // ---- Live games (spec 14) ----
+  liveStart: (item_id: string) => req<{ id: string; pin: string; total_questions: number }>("POST", "/admin/live/start", { item_id }),
+  liveNext: (id: string) => req<{ state: string; current_q?: number }>("POST", `/admin/live/${encodeURIComponent(id)}/next`),
+  liveResults: (id: string) => req<{ state: string; current_q: number; players: { nickname: string; score: number }[]; answered: number }>("GET", `/admin/live/${encodeURIComponent(id)}/results`),
+  liveJoin: (pin: string, child_id: string) => req<{ session_id: string }>("POST", "/live/join", { pin, child_id }),
+  liveState: (pin: string, child_id: string) =>
+    req<LiveState>("GET", `/live/${encodeURIComponent(pin)}/state?child_id=${encodeURIComponent(child_id)}`),
+  liveAnswer: (pin: string, child_id: string, choice: number) =>
+    req<{ ok: true; delta: number }>("POST", `/live/${encodeURIComponent(pin)}/answer`, { child_id, choice }),
+
+  // ---- Polls / Q&A ----
+  createPoll: (input: { course_id: string; question: string; options: string[] }) => req<{ id: string }>("POST", "/admin/polls", input),
+  polls: (course_id: string, child_id: string) =>
+    req<{ polls: PollView[] }>("GET", `/polls?course_id=${encodeURIComponent(course_id)}&child_id=${encodeURIComponent(child_id)}`),
+  votePoll: (id: string, child_id: string, choice: number) => req<{ ok: true }>("POST", `/polls/${encodeURIComponent(id)}/vote`, { child_id, choice }),
+  qaList: (course_id: string, child_id: string) =>
+    req<{ questions: QAItem[] }>("GET", `/qa?course_id=${encodeURIComponent(course_id)}&child_id=${encodeURIComponent(child_id)}`),
+  qaAsk: (course_id: string, child_id: string, body: string) => req<{ id: string }>("POST", "/qa", { course_id, child_id, body }),
+  qaVote: (id: string, child_id: string) => req<{ ok: true }>("POST", `/qa/${encodeURIComponent(id)}/vote`, { child_id }),
+  qaAnswered: (id: string) => req<{ ok: true }>("POST", `/admin/qa/${encodeURIComponent(id)}/answered`),
+
+  // ---- Chat ----
+  chatChannel: (courseId: string, child_id: string, since?: string) =>
+    req<{ messages: ChatMessage[] }>("GET", `/chat/course/${encodeURIComponent(courseId)}/channel?child_id=${encodeURIComponent(child_id)}${since ? `&since=${encodeURIComponent(since)}` : ""}`),
+  chatChannelSend: (courseId: string, child_id: string | null, body: string) =>
+    req<{ id: string }>("POST", `/chat/course/${encodeURIComponent(courseId)}/channel${child_id ? `?child_id=${encodeURIComponent(child_id)}` : ""}`, { body, child_id }),
+  chatOpenThread: (course_id: string, child_id: string) => req<{ id: string }>("POST", "/chat/thread", { course_id, child_id }),
+  chatStaffThread: (course_id: string, child_id: string) => req<{ id: string }>("POST", "/chat/thread/staff", { course_id, child_id }),
+  chatThreadMsgs: (id: string, child_id: string, since?: string) =>
+    req<{ messages: ChatMessage[] }>("GET", `/chat/thread/${encodeURIComponent(id)}?child_id=${encodeURIComponent(child_id)}${since ? `&since=${encodeURIComponent(since)}` : ""}`),
+  chatThreadSend: (id: string, child_id: string, body: string) =>
+    req<{ id: string }>("POST", `/chat/thread/${encodeURIComponent(id)}?child_id=${encodeURIComponent(child_id)}`, { body }),
+  chatThreads: (child_id: string) => req<{ threads: { id: string; course_id: string; course_title: string }[] }>("GET", `/chat/threads?child_id=${encodeURIComponent(child_id)}`),
+  chatStaffInbox: () => req<{ threads: { id: string; course_id: string; course_title: string; student: string; last_body: string | null; last_at: string | null }[] }>("GET", "/admin/chat/threads"),
+
+  // ---- Coaching ----
+  coaching: () => req<{ students: CoachStudent[] }>("GET", "/admin/coaching"),
+  coachNotes: (childId: string) => req<{ notes: { id: string; body: string; created_at: string; author: string }[] }>("GET", `/admin/coaching/${encodeURIComponent(childId)}/notes`),
+  coachAddNote: (childId: string, body: string) => req<{ id: string }>("POST", `/admin/coaching/${encodeURIComponent(childId)}/notes`, { body }),
+
+  // ---- Certificates ----
+  certificates: (child_id: string) => req<{ certificates: { code: string; issued_at: string; course_title: string; cover_emoji: string }[] }>("GET", `/certificates?child_id=${encodeURIComponent(child_id)}`),
+  certVerify: (code: string) => req<{ code: string; issued_at: string; student: string; course_title: string; institution: string | null }>("GET", `/cert/${encodeURIComponent(code)}`),
+
+  // ---- Moderation ----
+  moderation: () => req<{ items: ModItem[]; count: number }>("GET", "/admin/moderation"),
+  moderationHide: (kind: string, id: string) => req<{ ok: true }>("POST", "/admin/moderation/hide", { kind, id }),
+  moderationRestore: (kind: string, id: string) => req<{ ok: true }>("POST", "/admin/moderation/restore", { kind, id }),
 };
+
+export interface LiveState {
+  state: "lobby" | "question" | "reveal" | "ended";
+  current_q: number;
+  total: number;
+  question: { index: number; prompt: string; options: string[]; answer_index?: number; started_at: string | null; window_ms: number } | null;
+  answered: boolean;
+  podium?: { nickname: string; score: number; child_id: string }[];
+  players_count: number;
+}
+export interface PollView { id: string; question: string; options: string[]; open: boolean; tally: number[]; my_choice: number | null; total: number }
+export interface QAItem { id: string; body: string; answered: number; created_at: string; author: string; votes: number; voted: number | null }
+export interface ChatMessage { id: string; sender_child_id: string | null; sender_parent_id: string | null; sender_name: string; body: string; created_at: string }
+export interface CoachStudent {
+  id: string; display_name: string; grade: string; last_activity_days: number | null;
+  min_readiness: number | null; at_risk: boolean; notes: number;
+  flags: { streak_broken: boolean; low_readiness: boolean; inactive_7d: boolean };
+}
+export interface ModItem { kind: string; label: string; id: string; body: string; created_at: string }
 
 // ---- Tipos LMS (client-side) ----
 export interface AdminCourse {
