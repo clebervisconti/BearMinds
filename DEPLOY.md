@@ -77,17 +77,29 @@ Config **realmente aplicada** (docroot = `public_html`, `autoLoadHtaccess 1`):
 
 ## 3. Deploy contínuo
 
+**O app dir do VPS NÃO é um checkout git** — a fonte vai por **rsync-from-Mac**. Deploy normal (do Mac):
+
 ```
-local:  git add -A && git commit && git push
-VPS  :  cron (5 min) OU GitHub Actions dispatch → bash scripts/deploy.sh
+bash scripts/deploy-push.sh
 ```
-`scripts/deploy.sh` (roda no VPS): snapshot → `git pull` → `npm ci` → `npm run build` → rsync `dist/` → `systemctl restart bearminds-api` → **health gate** (`/api/health` = `{ok:true}`) → rollback automático em falha.
+`scripts/deploy-push.sh` (roda no MAC; credenciais em runtime de `~/.env.hostgator` + chave SSH no Keychain):
+snapshot (docroot + DB) → `rsync` da fonte Mac→VPS (exclui `node_modules/dist/data/.env/.git/.claude/legacy`) →
+`chown` p/ o dono do site → build no VPS como o dono (o servidor roda **TS via tsx**, só o front builda) →
+publica `dist/` no docroot com **`--exclude=.htaccess`** → `systemctl restart bearminds-api` →
+**health gate por localhost** (`http://127.0.0.1:8787/api/health` = `{ok:true}`) → rollback automático em falha.
+
+`scripts/deploy.sh` (roda NO VPS): a metade server-side — build → publica dist (preserva `.htaccess`) → restart →
+health gate localhost → rollback. **Não faz `git pull`** a menos que `APP_DIR` seja um checkout git.
 Rollback manual: `bash scripts/deploy.sh --rollback`.
 
-Cron sugerido (crontab do usuário do site):
+⚠️ **Regras críticas** (aprendidas 2026-07-04): (a) o `.htaccess` do docroot tem o reverse-proxy `[P]` `/api`→127.0.0.1:8787
++ SPA fallback e **vive só no VPS** — todo `rsync --delete` para o docroot PRECISA de `--exclude='.htaccess'`;
+(b) o health gate é **localhost**, nunca a URL pública (Cloudflare Access devolve 302 → falso negativo/rollback eterno);
+(c) `node:sqlite` exige **Node 24** (`/usr/local/node24/bin` no PATH).
+
+Cron/jobs (crontab do usuário do site — o `deploy.sh` server-side só é útil se a fonte for atualizada por CI/git):
 ```
-*/5 * * * * cd /home/bearminds.cybersphere.com.br/app && bash scripts/deploy.sh >> data/deploy.log 2>&1
-15 4 * * *  cd /home/bearminds.cybersphere.com.br/app && npm run jobs:nightly >> data/nightly.log 2>&1
+15 4 * * *  cd /home/bearminds.cybersphere.com.br/app && export PATH=/usr/local/node24/bin:$PATH && npm run jobs:nightly >> data/nightly.log 2>&1
 30 4 * * *  sqlite3 /home/bearminds.cybersphere.com.br/app/data/bearminds.db ".backup '/home/backups/bearminds/nightly-$(date +\%F).db'"
 ```
 (retenção de backups: 14 dias; material de chave NÃO vai no backup.)
