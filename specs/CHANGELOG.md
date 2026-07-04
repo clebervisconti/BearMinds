@@ -1,5 +1,28 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-04 — P4a: LMS (spec 13) — administração, professores e pipeline de conteúdo
+
+- **Novo spec `13-lms.md`:** papéis invite-only (guardian/professor/tutor/institution_admin/platform_admin),
+  cursos por instituição+disciplina+período, módulos com Learning Backlog (Inteli), itens (video/document/lesson/
+  quiz/game/live), **pipeline de enriquecimento IA** (upload → chunks por curso → atoms → geração grounded →
+  aprovação humana), matrícula self/assigned, **conclusão de módulo mastery-gated** (+100 moedas).
+- Pesquisa: Inteli (metaprojetos/backlog/tríade/papéis duais), Kahoot (live PIN/pódio — P4b), Slido (enquetes/Q&A — P4b).
+- Decisões do owner: staff invite-only; vídeo = embeds + MP4 ≤200MB; chat = canais + DM estudante↔staff (P4b);
+  live games polling (P4b). CSP `frame-src` estendido só p/ youtube-nocookie + player.vimeo.
+- Migração v3 (aditiva): `parents.role` + `parents.staff_institution_id`, `invites`, `courses`, `course_modules`,
+  `content_items`, `files`, `enrollments`, `item_progress`, `corpus_chunks.course_id`, `knowledge_atoms.course_id`.
+- Guardrails do spec 05 inalterados; conteúdo de professor passa pelo MESMO sign-off humano (verified_at).
+
+**Entregue (mesma data):** papéis + convites (invite-only, bootstrap `npm run make-admin`), área /admin
+(overview, editor de curso→módulo→item, upload MP4/PDF/DOCX/TXT/MD, enriquecer com IA + fila de revisão/aprovação,
+matrícula assinada, pessoas & convites, instituições), pipeline `server/gen/enrich.ts` (skill sintético `CRS-<item>`
+reusa TODO o motor: retriever/decompose/generate/guardrails/FSRS), lado do estudante (catálogo, /curso/:id com
+missões + Learning Backlog 🟢🟡⚪, player vídeo/documento/lição, conclusão mastery-gated +100 moedas + badge),
+CSP frame-src p/ youtube-nocookie+vimeo, media-src self. Verificado: tsc/build verdes, **34 testes vitest**
+(incl. o teste-chave: itens done + atoms não dominados ⇒ NÃO conclui), E2E no preview: admin cria/publica curso →
+aluna se inscreve → player → "Módulo concluído com maestria +100" → guardian 403 em /api/admin.
+Pendente P4a: testar pipeline IA completo no VPS (tem GEMINI_API_KEY); P4b: live games, chat, tutores.
+
 ## 2026-07-03 — Platform redesign (spec 12): plataforma para estudantes 6–19
 
 - **Pivô de produto (decisão do owner):** de app infantil parent-fronted para plataforma de estudos

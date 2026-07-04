@@ -171,6 +171,7 @@ const ACHIEVEMENT_TITLES: Record<string, string> = {
   atoms_10: "10 conceitos dominados",
   atoms_50: "50 conceitos dominados",
   prova_ready_80: "80% pronto para uma prova",
+  module_complete: "Módulo concluído com maestria",
 };
 
 /** Desbloqueia (dedup por UNIQUE). Retorna true se foi um desbloqueio novo; grava notificação. */

@@ -126,8 +126,9 @@ export interface ConsentState {
   granted: boolean;
   policy_version: string;
 }
+export type StaffRole = "guardian" | "professor" | "tutor" | "institution_admin" | "platform_admin";
 export interface MeResponse {
-  parent: { id: string; email: string; email_verified: boolean };
+  parent: { id: string; email: string; email_verified: boolean; role: StaffRole; staff_institution_id: string | null };
   children: Child[];
   consents: ConsentState[];
   active_child_id: string | null;

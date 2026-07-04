@@ -16,6 +16,8 @@ export function Aula() {
   const code = params.get("code") || undefined;
   const topic = params.get("topic") || undefined;
   const lang = (params.get("lang") as "pt" | "en") || "pt";
+  const itemId = params.get("item") || null; // item de curso (spec 13): concluir marca progresso
+  const cursoId = params.get("curso") || null;
 
   const [bundle, setBundle] = useState<GenerateBundle | null>(null);
   const [err, setErr] = useState<{ code: string; message: string } | null>(null);
@@ -67,7 +69,23 @@ export function Aula() {
             <button className="bm-btn" onClick={() => nav("/cursos")}>Escolher outro tópico</button>
           </div>
         )}
-        {bundle && <LearningExperience bundle={bundle} childId={child.id} onFinish={() => nav("/")} />}
+        {bundle && (
+          <LearningExperience
+            bundle={bundle}
+            childId={child.id}
+            onFinish={async () => {
+              if (itemId) {
+                try {
+                  const r = await api.learnItemProgress(itemId, child.id, "done");
+                  if (r.module_completed) alert("🎉 Missão concluída com maestria! +100 moedas");
+                } catch { /* best-effort */ }
+                nav(cursoId ? `/curso/${cursoId}` : "/cursos");
+              } else {
+                nav("/");
+              }
+            }}
+          />
+        )}
       </div>
     </AppShell>
   );

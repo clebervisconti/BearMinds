@@ -109,8 +109,8 @@ function activeChildId(parentId: string, sessionActive: string | null): string |
 
 function buildMe(parentId: string, sessionActive: string | null): MeResponse {
   const parent = db
-    .prepare("SELECT id, email, email_verified FROM parents WHERE id = ?")
-    .get(parentId) as { id: string; email: string; email_verified: number };
+    .prepare("SELECT id, email, email_verified, COALESCE(role,'guardian') AS role, staff_institution_id FROM parents WHERE id = ?")
+    .get(parentId) as { id: string; email: string; email_verified: number; role: MeResponse["parent"]["role"]; staff_institution_id: string | null };
   const children = getChildren(parentId);
   const active = activeChildId(parentId, sessionActive);
   const consents = active ? consentStateFor(parentId, active) : [];
@@ -118,7 +118,13 @@ function buildMe(parentId: string, sessionActive: string | null): MeResponse {
     ? REQUIRED_CONSENTS.some((s) => !consents.find((c) => c.scope === s && c.granted))
     : false;
   return {
-    parent: { id: parent.id, email: parent.email, email_verified: !!parent.email_verified },
+    parent: {
+      id: parent.id,
+      email: parent.email,
+      email_verified: !!parent.email_verified,
+      role: parent.role,
+      staff_institution_id: parent.staff_institution_id,
+    },
     children,
     consents,
     active_child_id: active,

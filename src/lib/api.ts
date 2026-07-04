@@ -114,6 +114,105 @@ export const api = {
     req<{ id: string }>("POST", `/community/posts/${encodeURIComponent(post_id)}/replies`, { child_id, body }),
   reportContent: (kind: "post" | "reply", id: string) =>
     req<{ ok: true }>("POST", "/community/report", { kind, id }),
+
+  // ---- LMS (spec 13) ----
+  adminOverview: () =>
+    req<{ role: string; institution_id: string | null; courses: number; published: number; students: number; pending_review: number }>("GET", "/admin/overview"),
+  adminCourses: () => req<{ courses: AdminCourse[] }>("GET", "/admin/courses"),
+  adminCreateCourse: (input: {
+    institution_id: string; subject_id: string; class_id: string;
+    term?: string | null; year?: number | null; title: string; description?: string | null; cover_emoji?: string;
+  }) => req<{ id: string }>("POST", "/admin/courses", input),
+  adminCourse: (id: string) => req<AdminCourseDetail>("GET", `/admin/courses/${encodeURIComponent(id)}`),
+  adminPatchCourse: (id: string, patch: Record<string, unknown>) =>
+    req<{ ok: true }>("PATCH", `/admin/courses/${encodeURIComponent(id)}`, patch),
+  adminCreateModule: (courseId: string, input: { title: string; objectives?: string | null }) =>
+    req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/modules`, input),
+  adminCreateItem: (moduleId: string, input: {
+    kind: string; title: string; payload?: Record<string, unknown> | null;
+    source_file_id?: string | null; duration_min?: number | null;
+  }) => req<{ id: string }>("POST", `/admin/modules/${encodeURIComponent(moduleId)}/items`, input),
+  adminApproveItem: (id: string) => req<{ ok: true }>("POST", `/admin/items/${encodeURIComponent(id)}/approve`),
+  adminDeleteItem: (id: string) => req<{ ok: true }>("DELETE", `/admin/items/${encodeURIComponent(id)}`),
+  adminEnrich: (itemId: string, text?: string) =>
+    req<{ job_id: string }>("POST", `/admin/items/${encodeURIComponent(itemId)}/enrich`, { text: text ?? null }),
+  adminJob: (id: string) =>
+    req<{ id: string; item_id: string; status: string; detail: string | null }>("GET", `/admin/jobs/${encodeURIComponent(id)}`),
+  adminPreview: (itemId: string) =>
+    req<{ bncc_code: string; lesson: unknown; quiz: { questions: unknown[] }; atoms: { id: string; text: string }[] }>(
+      "GET", `/admin/items/${encodeURIComponent(itemId)}/preview`),
+  adminUpload: async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", {
+      method: "POST", headers: { "X-BM-Client": "pwa" }, credentials: "include", body: fd,
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const err = (data as { error?: { code: string; message: string } } | null)?.error;
+      throw new ApiError(res.status, err?.code ?? "error", err?.message ?? "Falha no upload.");
+    }
+    return data as { id: string; name: string; mime: string; size: number };
+  },
+  adminInvites: () => req<{ invites: Record<string, unknown>[] }>("GET", "/admin/invites"),
+  adminCreateInvite: (input: { email: string; role: string; institution_id?: string | null }) =>
+    req<{ id: string; token: string; link: string }>("POST", "/admin/invites", input),
+  adminStudents: (institution?: string) =>
+    req<{ students: { id: string; display_name: string; grade: string; class_id: string | null }[] }>(
+      "GET", `/admin/students${institution ? `?institution=${encodeURIComponent(institution)}` : ""}`),
+  adminAssign: (courseId: string, child_ids: string[]) =>
+    req<{ assigned: number }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/assign`, { child_ids }),
+
+  inviteInfo: (token: string) =>
+    req<{ email: string; role: string; institution: string | null }>("GET", `/invites/${encodeURIComponent(token)}`),
+  inviteAccept: (token: string, password: string) =>
+    req<{ ok: true; role: string }>("POST", "/invites/accept", { token, password }),
+
+  learnCatalog: (child_id: string) =>
+    req<{ courses: CatalogCourse[] }>("GET", `/learn/catalog?child_id=${encodeURIComponent(child_id)}`),
+  learnEnroll: (child_id: string, course_id: string) =>
+    req<{ ok: true }>("POST", "/learn/enroll", { child_id, course_id }),
+  learnCourse: (id: string, child_id: string) =>
+    req<LearnCourse>("GET", `/learn/courses/${encodeURIComponent(id)}?child_id=${encodeURIComponent(child_id)}`),
+  learnItemProgress: (item_id: string, child_id: string, status: "doing" | "done", score?: number) =>
+    req<{ ok: true; module_completed: boolean; course_completed: boolean }>(
+      "POST", `/learn/items/${encodeURIComponent(item_id)}/progress`, { child_id, status, score }),
 };
+
+// ---- Tipos LMS (client-side) ----
+export interface AdminCourse {
+  id: string; title: string; description: string | null; cover_emoji: string; subject_id: string;
+  class_id: string; term: string | null; year: number | null; status: string; institution_id: string;
+  modules: number; enrolled: number;
+}
+export interface AdminItem {
+  id: string; kind: string; title: string; payload_json: string | null; source_file_id: string | null;
+  display_order: number; duration_min: number | null; status: string;
+  enrich: { status: string; detail: string | null } | null;
+}
+export interface AdminCourseDetail {
+  course: AdminCourse;
+  modules: { id: string; title: string; objectives: string | null; display_order: number; items: AdminItem[] }[];
+}
+export interface CatalogCourse {
+  id: string; title: string; description: string | null; cover_emoji: string; subject_id: string;
+  class_id: string; term: string | null; year: number | null; modules: number; enrolled_count: number;
+  enrolled: boolean; completed_at: string | null;
+}
+export interface LearnItem {
+  id: string; kind: string; title: string; duration_min: number | null;
+  payload: Record<string, unknown> | null;
+  progress: { status: "todo" | "doing" | "done"; score: number | null };
+}
+export interface LearnCourse {
+  course: { id: string; title: string; description: string | null; cover_emoji: string };
+  enrolled: boolean;
+  completed_at: string | null;
+  modules: {
+    id: string; title: string; objectives: string | null; complete: boolean;
+    backlog: { id: string; text: string; state: "new" | "reviewing" | "mastered" }[];
+    items: LearnItem[];
+  }[];
+}
 
 export const EXPORT_URL = "/api/me/export";

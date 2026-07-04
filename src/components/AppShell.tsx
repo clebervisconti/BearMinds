@@ -39,6 +39,11 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                 <span className="ic" aria-hidden>{n.icon}</span> {n.label}
               </NavLink>
             ))}
+            {me.data && me.data.parent.role !== "guardian" && (
+              <NavLink to="/admin" className={({ isActive }) => `bm-navitem bm-navitem-admin${isActive ? " active" : ""}`}>
+                <span className="ic" aria-hidden>⚙</span> Administração
+              </NavLink>
+            )}
           </nav>
 
           <div className="bm-utils">

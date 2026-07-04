@@ -95,6 +95,35 @@ export function ownChildOrThrow(parentId: string, childId: string): void {
   if (!row) throw forbidden("not_your_child", "Perfil não encontrado para esta conta.");
 }
 
+// ---- Papéis de staff (spec 13.1) ----
+export type StaffRole = "guardian" | "professor" | "tutor" | "institution_admin" | "platform_admin";
+
+export function parentRole(parentId: string): { role: StaffRole; institutionId: string | null } {
+  const row = db
+    .prepare("SELECT COALESCE(role,'guardian') AS role, staff_institution_id FROM parents WHERE id = ?")
+    .get(parentId) as { role: StaffRole; staff_institution_id: string | null } | undefined;
+  return { role: row?.role ?? "guardian", institutionId: row?.staff_institution_id ?? null };
+}
+
+/** Exige um dos papéis (platform_admin sempre passa). Usar APÓS requireParent. */
+export const requireRole = (...roles: StaffRole[]): MiddlewareHandler<AppEnv> =>
+  async (c, next) => {
+    const { role } = parentRole(c.get("parentId"));
+    if (role !== "platform_admin" && !roles.includes(role)) {
+      throw forbidden("staff_only", "Você não tem permissão para esta área.");
+    }
+    await next();
+  };
+
+/** Escopo de instituição do staff: platform_admin acessa qualquer; demais só a própria. */
+export function staffInstitutionOrThrow(parentId: string, institutionId: string): void {
+  const { role, institutionId: mine } = parentRole(parentId);
+  if (role === "platform_admin") return;
+  if (!mine || mine !== institutionId) {
+    throw forbidden("wrong_institution", "Este conteúdo pertence a outra instituição.");
+  }
+}
+
 // Consentimento vigente (granted e não revogado) para um escopo/child.
 export function hasConsent(parentId: string, childId: string, scope: ConsentScope): boolean {
   const row = db

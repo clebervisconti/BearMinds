@@ -291,6 +291,99 @@ CREATE TABLE IF NOT EXISTS community_replies (
   deleted_at TEXT
 );
 
+-- ===== LMS v3 (spec 13): convites, cursos, conteúdo, matrícula =====
+CREATE TABLE IF NOT EXISTS invites (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('professor','tutor','institution_admin','platform_admin')),
+  institution_id TEXT,
+  token TEXT UNIQUE NOT NULL,
+  invited_by TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  accepted_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS courses (
+  id TEXT PRIMARY KEY,
+  institution_id TEXT NOT NULL REFERENCES institutions(id),
+  subject_id TEXT NOT NULL,
+  class_id TEXT NOT NULL,
+  term TEXT,                                  -- t1|t2|t3|s1|s2|anual
+  year INTEGER,
+  title TEXT NOT NULL,
+  description TEXT,
+  cover_emoji TEXT DEFAULT '📘',
+  status TEXT DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS course_modules (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id),
+  title TEXT NOT NULL,
+  objectives TEXT,
+  display_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS content_items (
+  id TEXT PRIMARY KEY,
+  module_id TEXT NOT NULL REFERENCES course_modules(id),
+  kind TEXT NOT NULL CHECK(kind IN ('video','document','lesson','quiz','game','live')),
+  title TEXT NOT NULL,
+  payload_json TEXT,                          -- por kind: {url}|{file_id}|{lesson}|{quiz}|…
+  source_file_id TEXT,
+  display_order INTEGER DEFAULT 0,
+  duration_min INTEGER,
+  status TEXT DEFAULT 'draft' CHECK(status IN ('draft','pending_review','published')),
+  verified_by TEXT, verified_at TEXT,         -- sign-off humano (mesmo padrão do corpus BNCC)
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS files (
+  id TEXT PRIMARY KEY,
+  owner_parent_id TEXT NOT NULL,
+  kind TEXT NOT NULL,                         -- 'video' | 'document' | 'source'
+  original_name TEXT NOT NULL,
+  path TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS enrollments (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  course_id TEXT NOT NULL REFERENCES courses(id),
+  source TEXT NOT NULL CHECK(source IN ('self','assigned')),
+  assigned_by TEXT,
+  enrolled_at TEXT NOT NULL,
+  completed_at TEXT,
+  UNIQUE(child_id, course_id)
+);
+
+CREATE TABLE IF NOT EXISTS item_progress (
+  child_id TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  status TEXT DEFAULT 'todo' CHECK(status IN ('todo','doing','done')),
+  score REAL,
+  attempts INTEGER DEFAULT 0,
+  updated_at TEXT,
+  PRIMARY KEY (child_id, item_id)
+);
+
+CREATE TABLE IF NOT EXISTS enrich_jobs (
+  id TEXT PRIMARY KEY,
+  item_id TEXT NOT NULL,
+  course_id TEXT NOT NULL,
+  status TEXT DEFAULT 'queued' CHECK(status IN ('queued','running','review','done','error')),
+  detail TEXT,
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+
 -- ===== METRICS (privacy-preserving, agregados — spec 09.3) =====
 CREATE TABLE IF NOT EXISTS metrics_daily (
   day TEXT PRIMARY KEY,
@@ -316,23 +409,46 @@ CREATE INDEX IF NOT EXISTS idx_notif_parent ON notifications(parent_id, read_at)
 CREATE INDEX IF NOT EXISTS idx_coins_child ON coin_ledger(child_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_posts_inst ON community_posts(institution_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_replies_post ON community_replies(post_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_courses_inst ON courses(institution_id, status);
+CREATE INDEX IF NOT EXISTS idx_modules_course ON course_modules(course_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_items_module ON content_items(module_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_enroll_child ON enrollments(child_id);
+CREATE INDEX IF NOT EXISTS idx_enroll_course ON enrollments(course_id);
+CREATE INDEX IF NOT EXISTS idx_iprog_child ON item_progress(child_id);
+CREATE INDEX IF NOT EXISTS idx_invites_token ON invites(token);
+CREATE INDEX IF NOT EXISTS idx_ejobs_item ON enrich_jobs(item_id, status);
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 let initialized = false;
+
+function ensureColumns(table: string, defs: Record<string, string>): void {
+  const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
+  for (const [name, ddl] of Object.entries(defs)) {
+    if (!cols.includes(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`);
+  }
+}
 
 export function initDb(): void {
   if (initialized) return;
   db.exec(SCHEMA);
   const version = db.pragma("user_version", { simple: true }) as number;
   if (version < 2) {
-    // v2 (spec 12): perfis self + opt-out do leaderboard — colunas aditivas em children.
-    const cols = (db.prepare("PRAGMA table_info(children)").all() as { name: string }[]).map((c) => c.name);
-    if (!cols.includes("kind")) db.exec("ALTER TABLE children ADD COLUMN kind TEXT DEFAULT 'child'");
-    if (!cols.includes("leaderboard_hidden")) {
-      db.exec("ALTER TABLE children ADD COLUMN leaderboard_hidden INTEGER DEFAULT 0");
-    }
+    // v2 (spec 12): perfis self + opt-out do leaderboard.
+    ensureColumns("children", {
+      kind: "TEXT DEFAULT 'child'",
+      leaderboard_hidden: "INTEGER DEFAULT 0",
+    });
+  }
+  if (version < 3) {
+    // v3 (spec 13): papéis de staff + escopo de curso no corpus/atoms.
+    ensureColumns("parents", {
+      role: "TEXT DEFAULT 'guardian'",
+      staff_institution_id: "TEXT",
+    });
+    ensureColumns("corpus_chunks", { course_id: "TEXT" });
+    ensureColumns("knowledge_atoms", { course_id: "TEXT" });
   }
   if (version < SCHEMA_VERSION) db.pragma(`user_version = ${SCHEMA_VERSION}`);
   initialized = true;

@@ -13,15 +13,33 @@ import { Notificacoes } from "./screens/Notificacoes";
 import { Configuracoes } from "./screens/Configuracoes";
 import { Mais } from "./screens/Mais";
 import { Aula } from "./screens/Aula";
+import { CursoPage } from "./screens/CursoPage";
+import { Admin } from "./screens/admin/Admin";
+import { AdminCurso } from "./screens/admin/AdminCurso";
+import { AdminPessoas } from "./screens/admin/AdminPessoas";
+import { Convite } from "./screens/admin/Convite";
 import { PoliticaPrivacidade, Termos } from "./screens/Legal";
 
-// Guarda: exige titular autenticado; sem nenhum perfil → onboarding.
+// Guarda: exige titular autenticado; sem perfil → onboarding (guardião) ou /admin (staff, spec 13).
 function Private({ children, needsChild = true }: { children: JSX.Element; needsChild?: boolean }) {
   const me = useMe();
   const loc = useLocation();
   if (me.isLoading) return <BearLoader label="Carregando…" />;
   if (me.isError || !me.data) return <Navigate to="/entrar" replace state={{ from: loc }} />;
-  if (needsChild && me.data.children.length === 0) return <Navigate to="/onboarding" replace />;
+  if (needsChild && me.data.children.length === 0) {
+    return me.data.parent.role !== "guardian"
+      ? <Navigate to="/admin" replace />
+      : <Navigate to="/onboarding" replace />;
+  }
+  return children;
+}
+
+// Área de staff: dispensa perfil de estudante.
+function Staff({ children }: { children: JSX.Element }) {
+  const me = useMe();
+  const loc = useLocation();
+  if (me.isLoading) return <BearLoader label="Carregando…" />;
+  if (me.isError || !me.data) return <Navigate to="/entrar" replace state={{ from: loc }} />;
   return children;
 }
 
@@ -45,6 +63,12 @@ export function AppRouter() {
       <Route path="/configuracoes" element={<Private><Configuracoes /></Private>} />
       <Route path="/mais" element={<Private><Mais /></Private>} />
       <Route path="/aula" element={<Private><Aula /></Private>} />
+      <Route path="/curso/:id" element={<Private><CursoPage /></Private>} />
+
+      <Route path="/convite/:token" element={<Convite />} />
+      <Route path="/admin" element={<Staff><Admin /></Staff>} />
+      <Route path="/admin/curso/:id" element={<Staff><AdminCurso /></Staff>} />
+      <Route path="/admin/pessoas" element={<Staff><AdminPessoas /></Staff>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

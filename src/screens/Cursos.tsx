@@ -1,9 +1,9 @@
-// Cursos (spec 12.2) — cards por disciplina com progresso de maestria → tópicos do curso.
-import { useState } from "react";
+// Cursos (specs 12.2 + 13.4) — catálogo de cursos publicados + disciplinas BNCC com maestria.
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { BearLoader, ErrorNote } from "../components/common";
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, type CatalogCourse } from "../lib/api";
 import { useMe, useInstitutions, useTree, useParentSummary, activeChild } from "../lib/queries";
 import type { TopicCandidate } from "../../shared/contracts";
 
@@ -66,6 +66,8 @@ export function Cursos() {
   // -------- grade de cursos --------
   return (
     <AppShell title="Meus cursos">
+      <CourseCatalog childId={child.id} />
+      <div className="bm-eyebrow" style={{ margin: "1.4rem 0 .6rem" }}>Disciplinas (BNCC)</div>
       <TopicSearch grade={child.grade} onGo={(code) => nav(`/aula?code=${encodeURIComponent(code)}&lang=pt`)} />
       <div className="bm-course-grid">
         {institution.subjects.map((s) => {
@@ -107,6 +109,44 @@ export function Cursos() {
         .bm-course-ring span{background:var(--bm-surface);width:42px;height:42px;border-radius:999px;display:grid;place-items:center}
       `}</style>
     </AppShell>
+  );
+}
+
+// Catálogo de cursos publicados pela instituição (spec 13.4).
+function CourseCatalog({ childId }: { childId: string }) {
+  const nav = useNavigate();
+  const [courses, setCourses] = useState<CatalogCourse[] | null>(null);
+
+  useEffect(() => {
+    api.learnCatalog(childId).then((r) => setCourses(r.courses)).catch(() => setCourses([]));
+  }, [childId]);
+
+  if (!courses || courses.length === 0) return null; // sem cursos publicados → só disciplinas BNCC
+
+  return (
+    <section style={{ marginBottom: ".4rem" }}>
+      <div className="bm-eyebrow" style={{ marginBottom: ".6rem" }}>Cursos da sua escola</div>
+      <div className="bm-course-grid">
+        {courses.map((cs) => (
+          <button key={cs.id} className="bm-card bm-course" onClick={() => nav(`/curso/${cs.id}`)} style={{ cursor: "pointer", textAlign: "left" }}>
+            <span style={{ fontSize: "1.8rem" }} aria-hidden>{cs.cover_emoji}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 650 }}>{cs.title}</div>
+              <div className="bm-meta">
+                {cs.class_id}{cs.term ? ` · ${cs.term}` : ""}{cs.year ? ` · ${cs.year}` : ""} · {cs.modules} {cs.modules === 1 ? "missão" : "missões"}
+              </div>
+            </div>
+            {cs.completed_at ? (
+              <span className="bm-chip" style={{ color: "var(--bm-success)", fontWeight: 700 }}>✓</span>
+            ) : cs.enrolled ? (
+              <span className="bm-chip bm-chip-outline" style={{ color: "var(--bm-primary)" }}>inscrito</span>
+            ) : (
+              <span style={{ color: "var(--bm-primary)", fontWeight: 700 }}>→</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

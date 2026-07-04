@@ -12,9 +12,11 @@ const CSP = [
   "img-src 'self' data:",
   "font-src 'self' data:",
   "connect-src 'self'",
-  // Exploráveis rodam em <iframe sandbox srcDoc> (mesma origem, sem rede) — spec 05.
-  "frame-src 'self'",
-  "child-src 'self'",
+  // Exploráveis rodam em <iframe sandbox srcDoc> (spec 05); vídeo de curso só nestes players (spec 13.5).
+  "frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com",
+  "child-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com",
+  // <video> de upload é same-origin (/api/files)
+  "media-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
