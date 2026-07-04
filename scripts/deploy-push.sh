@@ -21,12 +21,13 @@ NODE_BIN="/usr/local/node24/bin"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "▶ 1/6 Snapshot (docroot + DB) no VPS"
+# DB por cópia de arquivo (o VPS não tem o sqlite3 CLI); inclui -wal/-shm p/ capturar writes pendentes.
 $SSH "$TARGET" "
   BK=/home/backups/bearminds/\$(date +%Y%m%d-%H%M%S)-predeploy
   mkdir -p \"\$BK\"
   rsync -a $DOC/ \"\$BK/public_html/\"
-  [ -f $APP/data/bearminds.db ] && /usr/bin/sqlite3 $APP/data/bearminds.db \".backup '\$BK/bearminds.db'\" || true
-  echo \"  snapshot: \$BK\"
+  for f in $APP/data/bearminds.db $APP/data/bearminds.db-wal $APP/data/bearminds.db-shm; do [ -f \"\$f\" ] && cp -a \"\$f\" \"\$BK/\"; done
+  [ -f \"\$BK/bearminds.db\" ] && echo \"  snapshot: \$BK (DB \$(du -h \"\$BK/bearminds.db\" | cut -f1))\" || echo \"  snapshot: \$BK (sem DB — provável primeira instalação)\"
 "
 
 echo "▶ 2/6 rsync da fonte Mac→VPS (exclui node_modules/dist/data/.env/.git/.claude/legacy)"

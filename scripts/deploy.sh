@@ -43,7 +43,10 @@ cd "$APP_DIR"
 echo "▶ Snapshot do dist atual + DB (pré-deploy)"
 mkdir -p "$BACKUP_DIR/$ts"
 [ -d "$DOCROOT" ] && rsync -a "$DOCROOT/" "$BACKUP_DIR/$ts/dist/" || true
-[ -f "$APP_DIR/data/bearminds.db" ] && sqlite3 "$APP_DIR/data/bearminds.db" ".backup '$BACKUP_DIR/$ts/bearminds.db'" || true
+# DB por cópia de arquivo (o VPS pode não ter o sqlite3 CLI); inclui -wal/-shm.
+for f in "$APP_DIR/data/bearminds.db" "$APP_DIR/data/bearminds.db-wal" "$APP_DIR/data/bearminds.db-shm"; do
+  [ -f "$f" ] && cp -a "$f" "$BACKUP_DIR/$ts/" || true
+done
 # retenção 14 dias
 find "$BACKUP_DIR" -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null || true
 
