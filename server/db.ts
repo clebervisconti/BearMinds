@@ -330,9 +330,9 @@ CREATE TABLE IF NOT EXISTS course_modules (
 CREATE TABLE IF NOT EXISTS content_items (
   id TEXT PRIMARY KEY,
   module_id TEXT NOT NULL REFERENCES course_modules(id),
-  kind TEXT NOT NULL CHECK(kind IN ('video','document','lesson','quiz','game','live')),
+  kind TEXT NOT NULL CHECK(kind IN ('video','document','lesson','quiz','game','live','assignment')),
   title TEXT NOT NULL,
-  payload_json TEXT,                          -- por kind: {url}|{file_id}|{lesson}|{quiz}|…
+  payload_json TEXT,                          -- por kind: {url}|{file_id}|{lesson}|{quiz}|{assignment}|…
   source_file_id TEXT,
   display_order INTEGER DEFAULT 0,
   duration_min INTEGER,
@@ -491,6 +491,96 @@ CREATE TABLE IF NOT EXISTS certificates (
   UNIQUE(child_id, course_id)
 );
 
+-- ===== ASSESSMENT CORE v5 (spec 15): events, banco de questões, provas, tarefas, rubricas =====
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  actor_kind TEXT NOT NULL CHECK(actor_kind IN ('child','parent','system')),
+  actor_id TEXT,
+  course_id TEXT,
+  ref_kind TEXT,
+  ref_id TEXT,
+  payload_json TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bank_questions (
+  id TEXT PRIMARY KEY,
+  course_id TEXT,                                        -- NULL = banco BNCC global
+  bncc_code TEXT,
+  tags_json TEXT,
+  kind TEXT NOT NULL CHECK(kind IN ('mcq','tf','short','numeric')),
+  prompt TEXT NOT NULL,
+  options_json TEXT,                                     -- mcq: string[]
+  answer_json TEXT NOT NULL,                             -- index / bool / {accepted:[]} / {value,tolerance}
+  explanation TEXT,
+  difficulty INTEGER DEFAULT 2 CHECK(difficulty BETWEEN 1 AND 3),
+  status TEXT DEFAULT 'draft' CHECK(status IN ('draft','approved','retired')),
+  origin TEXT NOT NULL CHECK(origin IN ('ai','staff')),
+  created_by TEXT NOT NULL,
+  verified_by TEXT,
+  verified_at TEXT,
+  version INTEGER DEFAULT 1,
+  replaced_by TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS exams (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  pool_json TEXT NOT NULL,                               -- {bncc_codes:[],tags:[],difficulty:[],n}
+  duration_min INTEGER,
+  opens_at TEXT,
+  due_at TEXT,
+  attempts_allowed INTEGER DEFAULT 1,
+  shuffle INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'draft' CHECK(status IN ('draft','published','closed')),
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS exam_attempts (
+  id TEXT PRIMARY KEY,
+  exam_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  seed TEXT NOT NULL,
+  questions_json TEXT NOT NULL,                          -- ids sorteados (imutável na tentativa)
+  answers_json TEXT,
+  score REAL,
+  started_at TEXT NOT NULL,
+  submitted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS rubrics (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  sections_json TEXT NOT NULL,                           -- [{title,weight,criteria:[{label,levels:[{label,points}]}]}]
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS submissions (
+  id TEXT PRIMARY KEY,
+  item_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  body_text TEXT,
+  file_id TEXT,
+  status TEXT DEFAULT 'submitted' CHECK(status IN ('draft','submitted','returned','resubmitted')),
+  submitted_at TEXT NOT NULL,
+  UNIQUE(item_id, child_id)
+);
+CREATE TABLE IF NOT EXISTS submission_reviews (
+  id TEXT PRIMARY KEY,
+  submission_id TEXT NOT NULL,
+  reviewer_parent_id TEXT NOT NULL,
+  rubric_scores_json TEXT,
+  points REAL,
+  feedback TEXT,
+  ai_assist_json TEXT,                                   -- pré-análise IA (só p/ o professor)
+  created_at TEXT NOT NULL
+);
+
 -- ===== METRICS (privacy-preserving, agregados — spec 09.3) =====
 CREATE TABLE IF NOT EXISTS metrics_daily (
   day TEXT PRIMARY KEY,
@@ -529,10 +619,20 @@ CREATE INDEX IF NOT EXISTS idx_qa_course ON qa_questions(course_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_chatmsg_scope ON chat_messages(scope, scope_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_threads_child ON chat_threads(child_id);
 CREATE INDEX IF NOT EXISTS idx_certs_code ON certificates(code);
+CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind, created_at);
+CREATE INDEX IF NOT EXISTS idx_events_course ON events(course_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_events_actor ON events(actor_kind, actor_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_bankq_course ON bank_questions(course_id, status);
+CREATE INDEX IF NOT EXISTS idx_bankq_code ON bank_questions(bncc_code, status);
+CREATE INDEX IF NOT EXISTS idx_exams_course ON exams(course_id, status);
+CREATE INDEX IF NOT EXISTS idx_attempts_exam ON exam_attempts(exam_id, child_id);
+CREATE INDEX IF NOT EXISTS idx_subs_item ON submissions(item_id);
+CREATE INDEX IF NOT EXISTS idx_subs_child ON submissions(child_id);
+CREATE INDEX IF NOT EXISTS idx_subrev_sub ON submission_reviews(submission_id);
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 let initialized = false;
 
 function ensureColumns(table: string, defs: Record<string, string>): void {
@@ -561,6 +661,39 @@ export function initDb(): void {
     });
     ensureColumns("corpus_chunks", { course_id: "TEXT" });
     ensureColumns("knowledge_atoms", { course_id: "TEXT" });
+  }
+  if (version < 5) {
+    // v5 (spec 15): motor de desbloqueio — árvore de condições em módulos/itens.
+    ensureColumns("course_modules", { availability_json: "TEXT" });
+    ensureColumns("content_items", { availability_json: "TEXT" });
+    // 'assignment' como novo kind (spec 15.4). O CHECK antigo bloqueia → rebuild da tabela
+    // (nenhuma outra tabela referencia content_items, então é seguro; feito só se o CHECK estiver desatualizado).
+    const ciSql = (db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='content_items'").get() as { sql: string } | undefined)?.sql ?? "";
+    if (!ciSql.includes("'assignment'")) {
+      db.pragma("foreign_keys = OFF");
+      db.exec(`
+        CREATE TABLE content_items_new (
+          id TEXT PRIMARY KEY,
+          module_id TEXT NOT NULL REFERENCES course_modules(id),
+          kind TEXT NOT NULL CHECK(kind IN ('video','document','lesson','quiz','game','live','assignment')),
+          title TEXT NOT NULL,
+          payload_json TEXT,
+          source_file_id TEXT,
+          display_order INTEGER DEFAULT 0,
+          duration_min INTEGER,
+          status TEXT DEFAULT 'draft' CHECK(status IN ('draft','pending_review','published')),
+          verified_by TEXT, verified_at TEXT,
+          created_at TEXT NOT NULL,
+          availability_json TEXT
+        );
+        INSERT INTO content_items_new (id,module_id,kind,title,payload_json,source_file_id,display_order,duration_min,status,verified_by,verified_at,created_at,availability_json)
+          SELECT id,module_id,kind,title,payload_json,source_file_id,display_order,duration_min,status,verified_by,verified_at,created_at,availability_json FROM content_items;
+        DROP TABLE content_items;
+        ALTER TABLE content_items_new RENAME TO content_items;
+        CREATE INDEX IF NOT EXISTS idx_items_module ON content_items(module_id, display_order);
+      `);
+      db.pragma("foreign_keys = ON");
+    }
   }
   if (version < SCHEMA_VERSION) db.pragma(`user_version = ${SCHEMA_VERSION}`);
   initialized = true;

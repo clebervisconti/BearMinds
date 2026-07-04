@@ -10,6 +10,8 @@ import { readJson, badRequest, forbidden, notFound, conflict, type AppEnv } from
 import { getMasteryRow, retrievabilityOf } from "../mastery/fsrs.ts";
 import { awardCoins, unlockAchievement } from "../gamify.ts";
 import { audit } from "../lib/audit.ts";
+import { emitEvent } from "../lib/events.ts";
+import { evaluateAvailability, resolverFor, parseCond } from "../lib/availability.ts";
 
 const app = new Hono<AppEnv>();
 app.use("/api/learn/*", csrfGuard);
@@ -62,6 +64,7 @@ app.post("/api/learn/enroll", requireParent, async (c) => {
     "INSERT INTO enrollments (id, child_id, course_id, source, enrolled_at) VALUES (?, ?, ?, 'self', ?)",
   ).run(newId(), child_id, course_id, nowIso());
   audit(`child:${child_id}`, "enroll_self", `course:${course_id}`);
+  emitEvent("enroll", { kind: "child", id: child_id }, { course_id, ref_kind: "course", ref_id: course_id }, { source: "self" });
   return c.json({ ok: true }, 201);
 });
 
@@ -150,29 +153,38 @@ app.get("/api/learn/courses/:id", requireParent, (c) => {
     .get(childId, course.id as string);
 
   const modules = db
-    .prepare("SELECT id, title, objectives, display_order FROM course_modules WHERE course_id = ? ORDER BY display_order")
-    .all(course.id as string) as { id: string; title: string; objectives: string | null; display_order: number }[];
+    .prepare("SELECT id, title, objectives, display_order, availability_json FROM course_modules WHERE course_id = ? ORDER BY display_order")
+    .all(course.id as string) as { id: string; title: string; objectives: string | null; display_order: number; availability_json: string | null }[];
   const itemsStmt = db.prepare(
-    `SELECT id, kind, title, payload_json, display_order, duration_min FROM content_items
+    `SELECT id, kind, title, payload_json, display_order, duration_min, availability_json FROM content_items
      WHERE module_id = ? AND status = 'published' ORDER BY display_order`,
   );
   const progStmt = db.prepare("SELECT status, score FROM item_progress WHERE child_id = ? AND item_id = ?");
+  const resolver = resolverFor(childId);   // desbloqueio (spec 15.5)
 
   const out = modules.map((m) => {
-    const items = itemsStmt.all(m.id) as ItemRow[];
+    const items = itemsStmt.all(m.id) as (ItemRow & { availability_json: string | null })[];
     const backlog = moduleBacklog(childId, items);
+    const modAvail = evaluateAvailability(parseCond(m.availability_json), resolver);
     return {
-      ...m,
+      id: m.id, title: m.title, objectives: m.objectives, display_order: m.display_order,
       complete: moduleComplete(childId, items, backlog),
+      locked: !modAvail.available,
+      lock_reason: modAvail.reason,
       backlog,
-      items: items.map((i) => ({
-        id: i.id,
-        kind: i.kind,
-        title: i.title,
-        duration_min: i.duration_min,
-        payload: i.payload_json ? JSON.parse(i.payload_json) : null,
-        progress: (progStmt.get(childId, i.id) as { status: string; score: number | null } | undefined) ?? { status: "todo", score: null },
-      })),
+      items: items.map((i) => {
+        const itAvail = evaluateAvailability(parseCond(i.availability_json), resolver);
+        return {
+          id: i.id,
+          kind: i.kind,
+          title: i.title,
+          duration_min: i.duration_min,
+          payload: i.payload_json ? JSON.parse(i.payload_json) : null,
+          locked: !itAvail.available,
+          lock_reason: itAvail.reason,
+          progress: (progStmt.get(childId, i.id) as { status: string; score: number | null } | undefined) ?? { status: "todo", score: null },
+        };
+      }),
     };
   });
 
@@ -190,20 +202,26 @@ app.post("/api/learn/items/:id/progress", requireParent, async (c) => {
 
   const item = db
     .prepare(
-      `SELECT i.id, i.module_id, m.course_id, cs.institution_id
+      `SELECT i.id, i.module_id, i.availability_json, m.course_id, m.availability_json AS mod_avail, cs.institution_id
        FROM content_items i JOIN course_modules m ON m.id = i.module_id JOIN courses cs ON cs.id = m.course_id
        WHERE i.id = ? AND i.status = 'published'`,
     )
-    .get(c.req.param("id")) as { id: string; module_id: string; course_id: string; institution_id: string } | undefined;
+    .get(c.req.param("id")) as { id: string; module_id: string; availability_json: string | null; course_id: string; mod_avail: string | null; institution_id: string } | undefined;
   if (!item) throw notFound("item_not_found", "Item não encontrado.");
   const enrolled = db.prepare("SELECT id FROM enrollments WHERE child_id = ? AND course_id = ?").get(child_id, item.course_id);
   if (!enrolled) throw forbidden("not_enrolled", "Inscreva-se no curso primeiro.");
+  // Desbloqueio (spec 15.5): não conclui item bloqueado (nem por módulo nem por si).
+  const resolver = resolverFor(child_id);
+  if (!evaluateAvailability(parseCond(item.mod_avail), resolver).available || !evaluateAvailability(parseCond(item.availability_json), resolver).available) {
+    throw forbidden("locked", "Este conteúdo ainda está bloqueado.");
+  }
 
   db.prepare(
     `INSERT INTO item_progress (child_id, item_id, status, score, attempts, updated_at) VALUES (?, ?, ?, ?, 1, ?)
      ON CONFLICT(child_id, item_id) DO UPDATE SET status = excluded.status,
        score = COALESCE(excluded.score, item_progress.score), attempts = attempts + 1, updated_at = excluded.updated_at`,
   ).run(child_id, item.id, status, score ?? null, nowIso());
+  emitEvent("item_progress", { kind: "child", id: child_id }, { course_id: item.course_id, ref_kind: "item", ref_id: item.id }, { status, score: score ?? null });
 
   // conclusão do módulo (mastery-gated) + recompensas com dedup por ledger
   let moduleCompleted = false;
@@ -222,6 +240,7 @@ app.post("/api/learn/items/:id/progress", requireParent, async (c) => {
         awardCoins(child_id, 100, "module_complete", item.module_id);
         unlockAchievement(parentId, child_id, "module_complete");
       }
+      emitEvent("module_complete", { kind: "child", id: child_id }, { course_id: item.course_id, ref_kind: "module", ref_id: item.module_id });
       // curso completo = todos os módulos completos
       const mods = db.prepare("SELECT id FROM course_modules WHERE course_id = ?").all(item.course_id) as { id: string }[];
       const allModules = mods.every((m) => {
@@ -246,6 +265,7 @@ app.post("/api/learn/items/:id/progress", requireParent, async (c) => {
             `INSERT INTO notifications (id, parent_id, child_id, kind, title, body, link, created_at)
              VALUES (?, ?, ?, 'achievement', '📜 Certificado emitido!', 'Você concluiu um curso com maestria.', '/conquistas', ?)`,
           ).run(newId(), parentId, child_id, nowIso());
+          emitEvent("course_complete", { kind: "child", id: child_id }, { course_id: item.course_id, ref_kind: "course", ref_id: item.course_id });
         } catch { /* já emitido */ }
       }
     }

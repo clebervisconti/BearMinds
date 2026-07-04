@@ -37,6 +37,9 @@ export function Conquistas() {
   if (!child) return null;
 
   const unlocked = new Set((coins.data?.achievements ?? []).map((a) => a.code));
+  const young = child.age_band === "8-10";   // 6–10: sem ranking individual público (spec 15.6)
+  const classCoins = (board.data?.entries ?? []).reduce((a, e) => a + e.coins, 0) + (board.data?.me?.rank === null ? (board.data?.me?.coins ?? 0) : 0);
+  const classLearners = (board.data?.entries ?? []).length;
 
   return (
     <AppShell title="Conquistas">
@@ -91,8 +94,23 @@ export function Conquistas() {
           )}
         </div>
 
-        {/* ranking da instituição */}
+        {/* ranking da instituição — 6–10 vê agregado da turma, 11+ vê ranking individual (spec 15.6) */}
         <aside style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+          {young ? (
+            <div className="bm-card-flat" style={{ padding: "1rem 1.1rem", display: "grid", gap: ".6rem" }}>
+              <div className="bm-eyebrow">Sua turma esta semana</div>
+              <div style={{ fontWeight: 650, fontSize: ".92rem" }}>{board.data?.institution ?? "Sua instituição"}</div>
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                <div><div style={{ fontSize: "1.5rem", fontWeight: 750, color: "var(--bm-primary)" }}>🪙 {classCoins}</div><div className="bm-eyebrow">moedas da turma</div></div>
+                <div><div style={{ fontSize: "1.5rem", fontWeight: 750 }}>{classLearners}</div><div className="bm-eyebrow">colegas ativos</div></div>
+              </div>
+              <div className="bm-card-flat" style={{ padding: ".6rem .8rem", background: "var(--bm-surface-2)" }}>
+                <div className="bm-eyebrow">Você esta semana</div>
+                <div style={{ fontWeight: 700 }}>🪙 {board.data?.me?.coins ?? coins.data?.week ?? 0} moedas</div>
+              </div>
+              <p className="bm-meta" style={{ margin: 0 }}>Aqui a gente comemora o progresso de todos juntos — sem competição. 🐻💛</p>
+            </div>
+          ) : (
           <div className="bm-card-flat" style={{ padding: "1rem 1.1rem" }}>
             <div className="bm-eyebrow">Ranking da semana</div>
             <div style={{ fontWeight: 650, margin: ".25rem 0 .75rem", fontSize: ".92rem" }}>{board.data?.institution ?? "Sua instituição"}</div>
@@ -129,6 +147,7 @@ export function Conquistas() {
               <p className="bm-meta" style={{ marginBottom: 0 }}>Você: 🪙 {board.data.me.coins} esta semana.</p>
             )}
           </div>
+          )}
         </aside>
       </div>
 

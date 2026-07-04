@@ -98,15 +98,20 @@ export function CursoPage() {
                     <div style={{ fontWeight: 680, fontSize: "1.05rem" }}>{m.title}</div>
                     {m.objectives && <div className="bm-meta">{m.objectives}</div>}
                   </div>
+                  {m.locked && <span className="bm-chip bm-chip-outline" style={{ color: "var(--bm-muted)" }}>🔒 {m.lock_reason ?? "bloqueada"}</span>}
                   {m.complete && <span className="bm-chip" style={{ color: "var(--bm-success)", fontWeight: 700 }}>✓ dominada</span>}
                 </div>
 
                 {/* itens */}
-                <div style={{ display: "grid", gap: ".5rem" }}>
+                <div style={{ display: "grid", gap: ".5rem", opacity: m.locked ? 0.55 : 1 }}>
                   {m.items.map((item) => (
+                    item.kind === "assignment" ? (
+                      <AssignmentCard key={item.id} item={item} childId={child.id} enrolled={data.enrolled} moduleLocked={m.locked} onChanged={() => void load()} />
+                    ) : (
                     <ItemCard
                       key={item.id}
                       item={item}
+                      moduleLocked={m.locked}
                       open={openItem === item.id}
                       enrolled={data.enrolled}
                       onToggle={() => setOpenItem(openItem === item.id ? null : item.id)}
@@ -118,6 +123,7 @@ export function CursoPage() {
                       }}
                       onDone={() => void markDone(item)}
                     />
+                    )
                   ))}
                   {m.items.length === 0 && <div className="bm-meta">Conteúdo em preparação.</div>}
                 </div>
@@ -144,31 +150,122 @@ export function CursoPage() {
               </section>
             ))}
           </div>
+
+          {data.enrolled && id && <ExamsSection courseId={id} childId={child.id} />}
         </>
       )}
     </AppShell>
   );
 }
 
-function ItemCard({ item, open, enrolled, onToggle, onStart, onDone }: {
-  item: LearnItem; open: boolean; enrolled: boolean;
+// ---------- Provas do curso (spec 15.3) ----------
+function ExamsSection({ courseId, childId }: { courseId: string; childId: string }) {
+  const nav = useNavigate();
+  const [exams, setExams] = useState<import("../lib/api").StudentExam[]>([]);
+  useEffect(() => { api.examStudentList(courseId, childId).then((r) => setExams(r.exams)).catch(() => setExams([])); }, [courseId, childId]);
+  if (exams.length === 0) return null;
+  return (
+    <section className="bm-card" style={{ marginTop: "1rem", display: "grid", gap: ".6rem" }}>
+      <div className="bm-eyebrow">📝 Provas</div>
+      {exams.map((e) => (
+        <div key={e.id} className="bm-card-flat" style={{ padding: ".65rem .85rem", display: "flex", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: ".92rem" }}>{e.title}</div>
+            <div className="bm-meta">
+              {e.duration_min ? `${e.duration_min} min · ` : ""}{e.attempts_used}/{e.attempts_allowed} tentativa(s)
+              {e.best_score !== null ? ` · melhor ${Math.round(e.best_score * 100)}%` : ""}
+              {e.due_at ? ` · até ${new Date(e.due_at).toLocaleDateString("pt-BR")}` : ""}
+            </div>
+          </div>
+          {e.best_score !== null && <span className="bm-chip" style={{ color: "var(--bm-success)", fontSize: ".74rem" }}>{Math.round(e.best_score * 100)}%</span>}
+          {e.can_start ? (
+            <button className="bm-btn bm-btn-sm" onClick={() => nav(`/prova/${e.id}?curso=${courseId}`)}>{e.attempts_used > 0 ? "Refazer" : "Fazer prova"}</button>
+          ) : !e.open_now ? <span className="bm-meta">fechada</span> : <span className="bm-meta">sem tentativas</span>}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// ---------- Tarefa (spec 15.4): entrega texto/arquivo + feedback do professor ----------
+function AssignmentCard({ item, childId, enrolled, moduleLocked, onChanged }: {
+  item: LearnItem; childId: string; enrolled: boolean; moduleLocked: boolean; onChanged: () => void;
+}) {
+  const p = (item.payload ?? {}) as { instructions?: string; max_points?: number };
+  const locked = item.locked || moduleLocked;
+  const [open, setOpen] = useState(false);
+  const [sub, setSub] = useState<import("../lib/api").StudentSubmission | null>(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => { if (open) api.mySubmission(item.id, childId).then((r) => { setSub(r.submission); setText(r.submission?.body_text ?? ""); }).catch(() => {}); }, [open, item.id, childId]);
+
+  async function send() {
+    setBusy(true); setErr(null);
+    try {
+      await api.submit(item.id, childId, text.trim() || null, null);
+      const r = await api.mySubmission(item.id, childId); setSub(r.submission);
+      onChanged();
+    } catch (e) { setErr(e instanceof ApiError ? e.message : "Erro ao enviar."); } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="bm-card-flat" style={{ padding: ".65rem .85rem", display: "grid", gap: ".5rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
+        <span aria-hidden>{locked ? "🔒" : "📝"}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontWeight: 600, fontSize: ".92rem", color: locked ? "var(--bm-muted)" : "var(--bm-ink)" }}>{item.title}</span>
+          {locked && item.lock_reason && <span className="bm-meta"> · {item.lock_reason}</span>}
+        </div>
+        {locked ? <span className="bm-meta">🔒 bloqueado</span>
+          : item.progress.status === "done" ? <span className="bm-chip" style={{ color: "var(--bm-success)", fontSize: ".74rem" }}>✓ entregue</span>
+          : !enrolled ? <span className="bm-meta">inscreva-se</span>
+          : <button className="bm-btn bm-btn-sm" onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Abrir tarefa"}</button>}
+      </div>
+      {open && !locked && enrolled && (
+        <div style={{ display: "grid", gap: ".5rem" }}>
+          {p.instructions && <div className="bm-card" style={{ padding: ".6rem .8rem", background: "var(--bm-surface-2)", border: 0, fontSize: ".9rem", whiteSpace: "pre-wrap" }}>{p.instructions}</div>}
+          {sub?.review && (
+            <div className="bm-card-flat" style={{ padding: ".6rem .8rem", borderLeft: "3px solid var(--bm-success)" }}>
+              <div className="bm-eyebrow">Feedback do professor{sub.review.points !== null ? ` · ${sub.review.points} pts` : ""}</div>
+              <div style={{ fontSize: ".9rem" }}>{sub.review.feedback}</div>
+            </div>
+          )}
+          <textarea className="bm-input" rows={4} placeholder="Escreva sua resposta…" value={text} onChange={(e) => setText(e.target.value)} style={{ resize: "vertical" }} />
+          {err && <ErrorNote>{err}</ErrorNote>}
+          <button className="bm-btn bm-btn-sm" disabled={busy || !text.trim()} onClick={send} style={{ justifySelf: "start" }}>
+            {busy ? "Enviando…" : sub ? "Reenviar" : "Entregar"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ItemCard({ item, moduleLocked, open, enrolled, onToggle, onStart, onDone }: {
+  item: LearnItem; moduleLocked: boolean; open: boolean; enrolled: boolean;
   onToggle: () => void; onStart: () => void; onDone: () => void;
 }) {
   const p = (item.payload ?? {}) as { url?: string; file_id?: string; name?: string; bncc_code?: string };
   const done = item.progress.status === "done";
   const isAI = item.kind === "lesson" || item.kind === "quiz";
+  const locked = item.locked || moduleLocked;
 
   return (
     <div className="bm-card-flat" style={{ padding: ".65rem .85rem", display: "grid", gap: ".5rem" }}>
       <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
-        <span aria-hidden>{KIND_ICON[item.kind] ?? "▫"}</span>
+        <span aria-hidden>{locked ? "🔒" : (KIND_ICON[item.kind] ?? "▫")}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ fontWeight: 600, fontSize: ".92rem", textDecoration: done ? "line-through" : "none", color: done ? "var(--bm-muted)" : "var(--bm-ink)" }}>
+          <span style={{ fontWeight: 600, fontSize: ".92rem", textDecoration: done ? "line-through" : "none", color: done || locked ? "var(--bm-muted)" : "var(--bm-ink)" }}>
             {item.title}
           </span>
-          {item.duration_min && <span className="bm-meta"> · ~{item.duration_min} min</span>}
+          {locked && item.lock_reason && <span className="bm-meta"> · {item.lock_reason}</span>}
+          {!locked && item.duration_min && <span className="bm-meta"> · ~{item.duration_min} min</span>}
         </div>
-        {done ? (
+        {locked ? (
+          <span className="bm-meta">🔒 bloqueado</span>
+        ) : done ? (
           <span className="bm-chip" style={{ color: "var(--bm-success)", fontSize: ".74rem" }}>✓ feito</span>
         ) : !enrolled ? (
           <span className="bm-meta">inscreva-se</span>

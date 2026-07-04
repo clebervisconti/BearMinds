@@ -1,5 +1,30 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-04 — P5a ENTREGUE (spec 15): assessment core — banco, provas, tarefas, rubricas, desbloqueio
+
+- **Migração v5 aditiva:** `events`, `bank_questions`, `exams`, `exam_attempts`, `rubrics`, `submissions`,
+  `submission_reviews` + `availability_json` em módulos/itens + `assignment` como novo kind de item
+  (rebuild seguro de `content_items` — nenhuma tabela a referencia; testado em DB populado, linhas preservadas).
+- **Events stream** (`server/lib/events.ts`): emitido em enroll/item/módulo/curso/live/exam/submission; poda 12m no nightly.
+- **Banco de questões** (`server/routes/bank.ts` + enrich): a IA gera rascunhos ao enriquecer uma lição
+  (`persistQuestionsToBank`), professor cura/aprova (sign-off), editar aprovada versiona (antiga `retired`).
+  UI `/admin/curso/:id/avaliacao` (aba Banco): filtro por status, criar mcq/tf/short/numeric, aprovar/aposentar.
+- **Provas** (`server/exams/grade.ts` puro + rotas): pool = filtro BNCC + sorteio reproduzível por seed
+  (`seededShuffle`, mulberry32), embaralha opções, cronometrada, auto-correção mcq/tf/numeric (short → professor),
+  score→evento de prontidão. UI: aba Provas (criar/publicar/resultados por questão) + `/prova/:id` (aluno).
+- **Tarefas + rubricas** (`server/lib/rubric.ts` puro + `server/routes/assignments.ts`): submissão texto
+  (arquivo aluno fica p/ P5b — precisa de upload não-staff), rubrica de seções ponderadas reutilizável,
+  **IA pré-análise do revisor** (resumo/cobertura/lacunas/suspeita-de-IA — sugestão, NUNCA nota).
+  UI: `/admin/curso/:courseId/item/:itemId/entregas` + entrega inline na página do curso.
+- **Motor de desbloqueio** (`server/lib/availability.ts` puro): árvore JSON `all/any/completed/module_mastered/
+  exam_min/date_from`, resolver DB durável, 🔒 com motivo legível; preset "após item anterior" no editor;
+  enforcement no course-view e no progresso/submissão.
+- **Gamificação por faixa etária** (spec 15.6): 8-10 vê agregado da turma (sem ranking individual), 11+ inalterado.
+- **Fixes transversais aplicados:** ~5 campos por tela + avançado; 1 agregação com prévia (rubrica); bloqueado = visível com motivo.
+- Verificado: tsc/build verdes, **76 testes vitest** (+23: availability truth-table, seed reproduzível,
+  gradeResponse, rubrica ponderada, versionamento, persist-to-bank idempotente), migração v5 em DB populado,
+  E2E no preview (endpoints vazios limpos, guardian 403 em banco/rubricas, Conquistas age-banded). Guardrails (05)/LGPD (09) inalterados.
+
 ## 2026-07-04 — P5 re-planejado: análise de gap Moodle + MindTickle → spec 15 + backlog P5a/b/c
 
 - **Pesquisa (2 análises paralelas):** Moodle (github.com/moodle/moodle + docs — taxonomia de 23 activity

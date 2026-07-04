@@ -16,12 +16,15 @@ import { Aula } from "./screens/Aula";
 import { CursoPage } from "./screens/CursoPage";
 import { CursoInteragir } from "./screens/CursoInteragir";
 import { LivePlay } from "./screens/LivePlay";
+import { ExamTake } from "./screens/ExamTake";
 import { Certificado } from "./screens/Certificado";
 import { Admin } from "./screens/admin/Admin";
 import { AdminCurso } from "./screens/admin/AdminCurso";
 import { AdminPessoas } from "./screens/admin/AdminPessoas";
 import { AdminCoaching } from "./screens/admin/AdminCoaching";
 import { AdminModeracao } from "./screens/admin/AdminModeracao";
+import { AdminAvaliacao } from "./screens/admin/AdminAvaliacao";
+import { AdminEntregas } from "./screens/admin/AdminEntregas";
 import { LiveHost } from "./screens/admin/LiveHost";
 import { Convite } from "./screens/admin/Convite";
 import { PoliticaPrivacidade, Termos } from "./screens/Legal";
@@ -72,12 +75,15 @@ export function AppRouter() {
       <Route path="/curso/:id" element={<Private><CursoPage /></Private>} />
       <Route path="/curso/:id/interagir" element={<Private needsChild={false}><CursoInteragir /></Private>} />
       <Route path="/live" element={<Private><LivePlay /></Private>} />
+      <Route path="/prova/:id" element={<Private><ExamTake /></Private>} />
 
       <Route path="/certificado/:code" element={<Certificado />} />
       <Route path="/convite/:token" element={<Convite />} />
       <Route path="/admin" element={<Staff><Admin /></Staff>} />
       <Route path="/admin/curso/:id" element={<Staff><AdminCurso /></Staff>} />
       <Route path="/admin/curso/:id/interagir" element={<Staff><CursoInteragir /></Staff>} />
+      <Route path="/admin/curso/:id/avaliacao" element={<Staff><AdminAvaliacao /></Staff>} />
+      <Route path="/admin/curso/:courseId/item/:itemId/entregas" element={<Staff><AdminEntregas /></Staff>} />
       <Route path="/admin/live/:itemId" element={<Staff><LiveHost /></Staff>} />
       <Route path="/admin/pessoas" element={<Staff><AdminPessoas /></Staff>} />
       <Route path="/admin/coaching" element={<Staff><AdminCoaching /></Staff>} />

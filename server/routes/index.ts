@@ -22,6 +22,8 @@ import chatRoutes from "./chat.ts";
 import coachingRoutes from "./coaching.ts";
 import certificateRoutes from "./certificates.ts";
 import moderationRoutes from "./moderation.ts";
+import bankRoutes from "./bank.ts";
+import assignmentRoutes from "./assignments.ts";
 
 // Registro central de rotas. Cada spec adiciona seu módulo aqui.
 export function mountRoutes(app: Hono<AppEnv>) {
@@ -55,4 +57,6 @@ export function mountRoutes(app: Hono<AppEnv>) {
   app.route("/", coachingRoutes);
   app.route("/", certificateRoutes);
   app.route("/", moderationRoutes);
+  app.route("/", bankRoutes);
+  app.route("/", assignmentRoutes);
 }

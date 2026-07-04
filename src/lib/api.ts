@@ -226,6 +226,40 @@ export const api = {
   moderation: () => req<{ items: ModItem[]; count: number }>("GET", "/admin/moderation"),
   moderationHide: (kind: string, id: string) => req<{ ok: true }>("POST", "/admin/moderation/hide", { kind, id }),
   moderationRestore: (kind: string, id: string) => req<{ ok: true }>("POST", "/admin/moderation/restore", { kind, id }),
+
+  // ---- Banco de questões (spec 15.2) ----
+  bankList: (courseId: string, q: { status?: string; bncc?: string; difficulty?: number } = {}) => {
+    const p = new URLSearchParams(); if (q.status) p.set("status", q.status); if (q.bncc) p.set("bncc", q.bncc); if (q.difficulty) p.set("difficulty", String(q.difficulty));
+    return req<{ questions: BankQuestion[]; counts: Record<string, number> }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/bank?${p.toString()}`);
+  },
+  bankCreate: (courseId: string, input: BankQuestionInput) => req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/bank`, input),
+  bankUpdate: (id: string, input: BankQuestionInput) => req<{ id: string; versioned: boolean }>("PATCH", `/admin/bank/${encodeURIComponent(id)}`, input),
+  bankApprove: (id: string) => req<{ ok: true }>("POST", `/admin/bank/${encodeURIComponent(id)}/approve`),
+  bankDelete: (id: string) => req<{ ok: true }>("DELETE", `/admin/bank/${encodeURIComponent(id)}`),
+
+  // ---- Provas (spec 15.3) ----
+  examList: (courseId: string) => req<{ exams: AdminExam[] }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/exams`),
+  examCreate: (courseId: string, input: ExamInput) => req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/exams`, input),
+  examSetStatus: (id: string, status: "draft" | "published" | "closed") => req<{ ok: true }>("PATCH", `/admin/exams/${encodeURIComponent(id)}`, { status }),
+  examResults: (id: string) => req<{ title: string; attempts: { display_name: string; score: number; submitted_at: string }[]; per_question: { qid: string; prompt: string; pct: number; total: number }[] }>("GET", `/admin/exams/${encodeURIComponent(id)}/results`),
+  examStudentList: (courseId: string, child_id: string) => req<{ exams: StudentExam[] }>("GET", `/exams?course_id=${encodeURIComponent(courseId)}&child_id=${encodeURIComponent(child_id)}`),
+  examStart: (id: string, child_id: string) => req<{ attempt_id: string; duration_min: number | null; questions: ExamQuestion[] }>("POST", `/exams/${encodeURIComponent(id)}/start`, { child_id }),
+  examSubmit: (id: string, attemptId: string, child_id: string, answers: { qid: string; response: unknown }[]) =>
+    req<{ score: number; graded_count: number; needs_manual: number }>("POST", `/exams/${encodeURIComponent(id)}/attempts/${encodeURIComponent(attemptId)}/submit`, { child_id, answers }),
+
+  // ---- Rubricas + Tarefas (spec 15.4) ----
+  rubricList: (courseId: string) => req<{ rubrics: Rubric[] }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/rubrics`),
+  rubricCreate: (courseId: string, input: { title: string; sections: RubricSection[] }) => req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/rubrics`, input),
+  submit: (itemId: string, child_id: string, body_text: string | null, file_id: string | null) =>
+    req<{ ok: true }>("POST", `/learn/items/${encodeURIComponent(itemId)}/submit`, { child_id, body_text, file_id }),
+  mySubmission: (itemId: string, child_id: string) => req<{ submission: StudentSubmission | null }>("GET", `/learn/items/${encodeURIComponent(itemId)}/submission?child_id=${encodeURIComponent(child_id)}`),
+  submissionsForItem: (itemId: string) => req<{ submissions: AdminSubmission[] }>("GET", `/admin/items/${encodeURIComponent(itemId)}/submissions`),
+  reviewSubmission: (id: string, input: { feedback: string; rubric_id?: string | null; selections?: number[][] | null; points?: number | null }) => req<{ ok: true; points: number | null }>("POST", `/admin/submissions/${encodeURIComponent(id)}/review`, input),
+  aiReviewSubmission: (id: string) => req<{ ai_assist: AiAssist }>("POST", `/admin/submissions/${encodeURIComponent(id)}/ai-review`),
+
+  // ---- Desbloqueio (spec 15.5) ----
+  setModuleAvailability: (id: string, availability_json: string | null) => req<{ ok: true }>("PATCH", `/admin/modules/${encodeURIComponent(id)}`, { availability_json }),
+  setItemAvailability: (id: string, availability_json: string | null) => req<{ ok: true }>("PATCH", `/admin/items/${encodeURIComponent(id)}`, { availability_json }),
 };
 
 export interface LiveState {
@@ -255,12 +289,12 @@ export interface AdminCourse {
 }
 export interface AdminItem {
   id: string; kind: string; title: string; payload_json: string | null; source_file_id: string | null;
-  display_order: number; duration_min: number | null; status: string;
+  display_order: number; duration_min: number | null; status: string; availability_json: string | null;
   enrich: { status: string; detail: string | null } | null;
 }
 export interface AdminCourseDetail {
   course: AdminCourse;
-  modules: { id: string; title: string; objectives: string | null; display_order: number; items: AdminItem[] }[];
+  modules: { id: string; title: string; objectives: string | null; display_order: number; availability_json: string | null; items: AdminItem[] }[];
 }
 export interface CatalogCourse {
   id: string; title: string; description: string | null; cover_emoji: string; subject_id: string;
@@ -270,6 +304,7 @@ export interface CatalogCourse {
 export interface LearnItem {
   id: string; kind: string; title: string; duration_min: number | null;
   payload: Record<string, unknown> | null;
+  locked: boolean; lock_reason: string | null;
   progress: { status: "todo" | "doing" | "done"; score: number | null };
 }
 export interface LearnCourse {
@@ -278,9 +313,32 @@ export interface LearnCourse {
   completed_at: string | null;
   modules: {
     id: string; title: string; objectives: string | null; complete: boolean;
+    locked: boolean; lock_reason: string | null;
     backlog: { id: string; text: string; state: "new" | "reviewing" | "mastered" }[];
     items: LearnItem[];
   }[];
 }
 
 export const EXPORT_URL = "/api/me/export";
+
+// ---- P5a: Assessment core (spec 15) ----
+export type BankKind = "mcq" | "tf" | "short" | "numeric";
+export interface BankQuestionInput {
+  kind: BankKind; prompt: string; options?: string[] | null; answer: unknown;
+  explanation?: string | null; bncc_code?: string | null; tags?: string[] | null; difficulty?: number;
+}
+export interface BankQuestion extends BankQuestionInput {
+  id: string; status: "draft" | "approved" | "retired"; origin: "ai" | "staff"; approved: boolean; version: number;
+}
+export interface ExamPool { bncc_codes?: string[] | null; tags?: string[] | null; difficulty?: number[] | null; n: number }
+export interface ExamInput { title: string; description?: string | null; pool: ExamPool; duration_min?: number | null; opens_at?: string | null; due_at?: string | null; attempts_allowed?: number }
+export interface AdminExam { id: string; title: string; pool: ExamPool; duration_min: number | null; opens_at: string | null; due_at: string | null; attempts_allowed: number; status: string; pool_available: number; students_attempted: number }
+export interface StudentExam { id: string; title: string; description: string | null; duration_min: number | null; opens_at: string | null; due_at: string | null; attempts_used: number; attempts_allowed: number; best_score: number | null; open_now: boolean; can_start: boolean }
+export interface ExamQuestion { id: string; kind: BankKind; prompt: string; options: string[] | null }
+export interface RubricLevel { label: string; points: number }
+export interface RubricCriterion { label: string; levels: RubricLevel[] }
+export interface RubricSection { title: string; weight: number; criteria: RubricCriterion[] }
+export interface Rubric { id: string; title: string; sections: RubricSection[] }
+export interface StudentSubmission { id: string; body_text: string | null; file_id: string | null; status: string; submitted_at: string; review: { points: number | null; feedback: string; created_at: string } | null }
+export interface AdminSubmission { id: string; child_id: string; student: string; body_text: string | null; file_id: string | null; status: string; submitted_at: string; points: number | null }
+export interface AiAssist { summary: string; coverage: string[]; gaps: string[]; ai_suspicion: "baixa" | "média" | "alta" }

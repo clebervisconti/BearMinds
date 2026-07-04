@@ -95,7 +95,7 @@ app.get("/api/admin/courses/:id", requireParent, requireRole(...STAFF), (c) => {
     .prepare("SELECT * FROM course_modules WHERE course_id = ? ORDER BY display_order, title")
     .all(course.id) as Record<string, unknown>[];
   const itemsStmt = db.prepare(
-    "SELECT id, kind, title, payload_json, source_file_id, display_order, duration_min, status FROM content_items WHERE module_id = ? ORDER BY display_order",
+    "SELECT id, kind, title, payload_json, source_file_id, display_order, duration_min, status, availability_json FROM content_items WHERE module_id = ? ORDER BY display_order",
   );
   const jobStmt = db.prepare(
     "SELECT status, detail FROM enrich_jobs WHERE item_id = ? ORDER BY created_at DESC LIMIT 1",
@@ -159,6 +159,7 @@ app.patch("/api/admin/modules/:id", requireParent, requireRole(...STAFF), async 
     title: z.string().trim().min(2).max(120).optional(),
     objectives: z.string().max(1000).nullish().optional(),
     display_order: z.number().int().min(0).optional(),
+    availability_json: z.string().max(4000).nullish().optional(),   // motor de desbloqueio (spec 15.5)
   }));
   const sets = Object.keys(body).map((k) => `${k} = ?`);
   if (sets.length) db.prepare(`UPDATE course_modules SET ${sets.join(", ")} WHERE id = ?`).run(...Object.values(body).map((v) => v ?? null), c.req.param("id"));
@@ -167,7 +168,7 @@ app.patch("/api/admin/modules/:id", requireParent, requireRole(...STAFF), async 
 
 // ---------- Itens ----------
 const itemSchema = z.object({
-  kind: z.enum(["video", "document", "lesson", "quiz", "game", "live"]),
+  kind: z.enum(["video", "document", "lesson", "quiz", "game", "live", "assignment"]),
   title: z.string().trim().min(2).max(140),
   payload: z.record(z.string(), z.unknown()).nullish(),
   source_file_id: z.string().nullish(),
@@ -211,6 +212,7 @@ app.patch("/api/admin/items/:id", requireParent, requireRole(...STAFF), async (c
     payload: z.record(z.string(), z.unknown()).nullish().optional(),
     display_order: z.number().int().min(0).optional(),
     duration_min: z.number().int().min(1).max(600).nullish().optional(),
+    availability_json: z.string().max(4000).nullish().optional(),   // motor de desbloqueio (spec 15.5)
   }));
   if (body.payload !== undefined) validateVideoPayload(body.payload as Record<string, unknown> | null);
   const sets: string[] = [];
@@ -219,6 +221,7 @@ app.patch("/api/admin/items/:id", requireParent, requireRole(...STAFF), async (c
   if (body.payload !== undefined) { sets.push("payload_json = ?"); vals.push(body.payload ? JSON.stringify(body.payload) : null); }
   if (body.display_order !== undefined) { sets.push("display_order = ?"); vals.push(body.display_order); }
   if (body.duration_min !== undefined) { sets.push("duration_min = ?"); vals.push(body.duration_min ?? null); }
+  if (body.availability_json !== undefined) { sets.push("availability_json = ?"); vals.push(body.availability_json ?? null); }
   if (sets.length) db.prepare(`UPDATE content_items SET ${sets.join(", ")} WHERE id = ?`).run(...vals, c.req.param("id"));
   return c.json({ ok: true });
 });

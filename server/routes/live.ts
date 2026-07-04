@@ -7,6 +7,7 @@ import { requireParent, requireRole, csrfGuard, ownChildOrThrow, staffInstitutio
 import { readJson, badRequest, forbidden, notFound, conflict, type AppEnv } from "../lib/http.ts";
 import { liveScore, pinFromBytes, LIVE_QUESTION_MS } from "../live/scoring.ts";
 import { awardCoins } from "../gamify.ts";
+import { emitEvent } from "../lib/events.ts";
 import type { QuizQuestion } from "../../shared/contracts.ts";
 
 const app = new Hono<AppEnv>();
@@ -107,6 +108,7 @@ app.post("/api/live/join", requireParent, async (c) => {
   const child = db.prepare("SELECT display_name FROM children WHERE id = ? AND deleted_at IS NULL").get(child_id) as { display_name: string } | undefined;
   if (!child) throw notFound("child_not_found", "Perfil não encontrado.");
   db.prepare("INSERT OR IGNORE INTO live_players (session_id, child_id, nickname, score, joined_at) VALUES (?, ?, ?, 0, ?)").run(s.id, child_id, child.display_name, nowIso());
+  emitEvent("live_join", { kind: "child", id: child_id }, { course_id: s.course_id, ref_kind: "live", ref_id: s.id });
   return c.json({ session_id: s.id });
 });
 
@@ -158,6 +160,7 @@ app.post("/api/live/:pin/answer", requireParent, async (c) => {
   const delta = liveScore(correct, ms);
   db.prepare("INSERT INTO live_answers (session_id, child_id, q_index, choice, correct, ms, delta) VALUES (?, ?, ?, ?, ?, ?, ?)").run(s.id, child_id, s.current_q, choice, correct ? 1 : 0, ms, delta);
   if (delta > 0) db.prepare("UPDATE live_players SET score = score + ? WHERE session_id = ? AND child_id = ?").run(delta, s.id, child_id);
+  emitEvent("live_answer", { kind: "child", id: child_id }, { course_id: s.course_id, ref_kind: "live", ref_id: s.id }, { correct, delta });
   return c.json({ ok: true, delta });
 });
 

@@ -4,6 +4,7 @@
 //  3) Coortes de retenção D1/D7/D30 a partir de study_sessions.
 import { db, nowIso } from "../db.ts";
 import { logger } from "../logger.ts";
+import { pruneEvents } from "../lib/events.ts";
 
 const DELETION_WINDOW_DAYS = 30;
 
@@ -105,7 +106,8 @@ export function runNightly(now = new Date()): void {
   computeDailyMetrics(yesterday);
   computeDailyMetrics(new Date(now.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10));
   const cohorts = computeCohorts(now);
-  logger.info({ del, cohorts }, "nightly job concluído");
+  const prunedEvents = pruneEvents(365);   // retenção do events stream (spec 15.1)
+  logger.info({ del, cohorts, prunedEvents }, "nightly job concluído");
 }
 
 // Executado diretamente (cron) → roda e sai.

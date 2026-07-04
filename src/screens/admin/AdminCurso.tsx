@@ -13,6 +13,7 @@ const KIND_META: Record<string, { icon: string; label: string }> = {
   quiz: { icon: "✍️", label: "Quiz (IA)" },
   game: { icon: "🎮", label: "Jogo" },
   live: { icon: "📡", label: "Ao vivo" },
+  assignment: { icon: "📝", label: "Tarefa" },
 };
 
 export function AdminCurso() {
@@ -83,6 +84,7 @@ export function AdminCurso() {
               </div>
             </div>
             <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${course.id}/avaliacao`)}>🗃 Avaliação</button>
               <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${course.id}/interagir`, { state: { title: course.title } })}>💬 Interação</button>
               <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => setAssigning((v) => !v)}>🎓 Matricular alunos</button>
               <button className="bm-btn bm-btn-sm" onClick={togglePublish} style={published ? { background: "var(--bm-warn)" } : {}}>
@@ -113,10 +115,12 @@ export function AdminCurso() {
                 {addingTo === m.id && <AddItem moduleId={m.id} onDone={() => { setAddingTo(null); void load(); }} />}
 
                 {m.items.length === 0 && <div className="bm-meta">Sem itens ainda — adicione vídeo, documento ou uma lição com IA.</div>}
-                {m.items.map((i) => (
+                {m.items.map((i, ii) => (
                   <ItemRow
                     key={i.id}
                     item={i}
+                    courseId={course.id}
+                    prevItemId={ii > 0 ? m.items[ii - 1].id : null}
                     onChanged={() => void load()}
                     onPreview={() => setPreviewItem(previewItem === i.id ? null : i.id)}
                     previewOpen={previewItem === i.id}
@@ -137,8 +141,8 @@ export function AdminCurso() {
 }
 
 // ---------- linha de item ----------
-function ItemRow({ item, onChanged, onPreview, previewOpen }: {
-  item: AdminItem; onChanged: () => void; onPreview: () => void; previewOpen: boolean;
+function ItemRow({ item, courseId, prevItemId, onChanged, onPreview, previewOpen }: {
+  item: AdminItem; courseId: string; prevItemId: string | null; onChanged: () => void; onPreview: () => void; previewOpen: boolean;
 }) {
   const nav = useNavigate();
   const meta = KIND_META[item.kind] ?? { icon: "▫", label: item.kind };
@@ -147,6 +151,15 @@ function ItemRow({ item, onChanged, onPreview, previewOpen }: {
   const canEnrich = (item.kind === "lesson" || item.kind === "quiz") && !enrichBusy;
   const canApprove = item.status === "pending_review";
   const canLive = item.kind === "quiz" && item.status === "published";
+  const locked = !!item.availability_json;
+  async function toggleLock() {
+    if (!prevItemId) return;
+    setErr(null);
+    try {
+      await api.setItemAvailability(item.id, locked ? null : JSON.stringify({ type: "completed", item_id: prevItemId, label: "Conclua o item anterior" }));
+      onChanged();
+    } catch (e) { setErr(e instanceof ApiError ? e.message : "Erro."); }
+  }
 
   async function run(fn: () => Promise<unknown>) {
     setErr(null);
@@ -176,11 +189,17 @@ function ItemRow({ item, onChanged, onPreview, previewOpen }: {
             <button className="bm-btn bm-btn-sm" onClick={() => run(() => api.adminApproveItem(item.id))}>✓ Aprovar e publicar</button>
           </>
         )}
-        {item.status === "draft" && (item.kind === "video" || item.kind === "document") && (
+        {item.status === "draft" && (item.kind === "video" || item.kind === "document" || item.kind === "assignment") && (
           <button className="bm-btn bm-btn-sm" onClick={() => run(() => api.adminApproveItem(item.id))}>Publicar</button>
         )}
         {canLive && (
           <button className="bm-btn bm-btn-sm" style={{ background: "var(--bm-accent)" }} onClick={() => nav(`/admin/live/${item.id}`)}>📡 Ao vivo</button>
+        )}
+        {item.kind === "assignment" && (
+          <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${courseId}/item/${item.id}/entregas`)}>📥 Entregas</button>
+        )}
+        {prevItemId && (
+          <button className="bm-btn-quiet bm-btn-sm" title="Desbloquear só após concluir o item anterior" onClick={toggleLock}>{locked ? "🔒 bloqueado" : "🔓 livre"}</button>
         )}
         <button className="bm-btn-quiet bm-btn-sm" onClick={() => { if (confirm("Excluir este item?")) void run(() => api.adminDeleteItem(item.id)); }} aria-label="Excluir">🗑</button>
       </div>
@@ -237,10 +256,12 @@ function ItemPreview({ itemId }: { itemId: string }) {
 
 // ---------- adicionar item ----------
 function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void }) {
-  const [kind, setKind] = useState<"video" | "document" | "lesson">("lesson");
+  const [kind, setKind] = useState<"video" | "document" | "lesson" | "assignment">("lesson");
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [text, setText] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [maxPoints, setMaxPoints] = useState(100);
   const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -259,6 +280,7 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
         if (kind === "document") payload = { file_id: up.id, name: up.name };
       }
       if (kind === "video" && videoUrl.trim()) payload = { url: videoUrl.trim() };
+      if (kind === "assignment") payload = { instructions: instructions.trim(), accept: ["text", "file"], max_points: maxPoints };
 
       setBusy("Criando item…");
       const item = await api.adminCreateItem(moduleId, { kind, title: title.trim(), payload, source_file_id: sourceFileId });
@@ -281,12 +303,13 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
     !!busy || title.trim().length < 2 ||
     (kind === "video" && !videoUrl.trim() && !file) ||
     (kind === "document" && !file) ||
+    (kind === "assignment" && instructions.trim().length < 5) ||
     needsSource;
 
   return (
     <div className="bm-card-flat" style={{ padding: ".9rem", display: "grid", gap: ".6rem", background: "var(--bm-surface-2)" }}>
       <div style={{ display: "flex", gap: ".4rem", flexWrap: "wrap" }}>
-        {(["lesson", "video", "document"] as const).map((k) => (
+        {(["lesson", "video", "document", "assignment"] as const).map((k) => (
           <button key={k} className={`bm-btn-sm ${kind === k ? "bm-btn" : "bm-btn bm-btn-ghost"}`} onClick={() => setKind(k)}>
             {KIND_META[k].icon} {k === "lesson" ? "Lição + Quiz (IA)" : KIND_META[k].label}
           </button>
@@ -317,6 +340,14 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
           <label className="bm-meta">ou envie o material (PDF/DOCX/TXT/MD):{" "}
             <input type="file" accept=".pdf,.docx,.txt,.md" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
+        </>
+      )}
+
+      {kind === "assignment" && (
+        <>
+          <textarea className="bm-input" rows={4} placeholder="Instruções da tarefa para o aluno…" value={instructions} onChange={(e) => setInstructions(e.target.value)} style={{ resize: "vertical" }} />
+          <label className="bm-meta">Pontuação máxima: <input className="bm-input" type="number" min={1} max={1000} value={maxPoints} onChange={(e) => setMaxPoints(Number(e.target.value))} style={{ width: 100, display: "inline-block" }} /></label>
+          <div className="bm-meta">O aluno entrega texto e/ou arquivo. Você corrige em <b>Entregas</b> (com rubrica e pré-análise de IA).</div>
         </>
       )}
 

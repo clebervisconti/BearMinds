@@ -73,6 +73,34 @@ export function gradeToAgeBand(gradeEquiv: string): AgeBand {
 
 export const skillCodeForItem = (itemId: string) => `CRS-${itemId}`;
 
+/** Banco de questões (spec 15.2): persiste as questões geradas como `draft` p/ o professor curar.
+ *  Idempotente por (course, bncc_code, origin='ai'): re-enriquecer substitui os drafts de IA. */
+export function persistQuestionsToBank(
+  courseId: string,
+  bnccCode: string,
+  questions: { kind: string; prompt: string; options?: string[]; answer_index?: number; answer_number?: number; accept?: string[]; explanation?: string }[],
+  parentId: string,
+): number {
+  db.prepare("DELETE FROM bank_questions WHERE course_id = ? AND bncc_code = ? AND origin = 'ai' AND status = 'draft'").run(courseId, bnccCode);
+  let n = 0;
+  const ins = db.prepare(
+    `INSERT INTO bank_questions (id, course_id, bncc_code, tags_json, kind, prompt, options_json, answer_json, explanation, difficulty, status, origin, created_by, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 2, 'draft', 'ai', ?, ?)`,
+  );
+  for (const q of questions) {
+    let kind: string | null = null;
+    let answer: unknown = null;
+    let options: string[] | null = null;
+    if (q.kind === "mcq" && q.options && typeof q.answer_index === "number") { kind = "mcq"; options = q.options; answer = q.answer_index; }
+    else if (q.kind === "numeric" && typeof q.answer_number === "number") { kind = "numeric"; answer = { value: q.answer_number, tolerance: 0 }; }
+    else if (q.kind === "short" && q.accept?.length) { kind = "short"; answer = { accepted: q.accept }; }
+    if (!kind) continue;   // pula tipos que não mapeiam (ex.: precisa de checagem manual)
+    ins.run(newId(), courseId, bnccCode, null, kind, q.prompt, options ? JSON.stringify(options) : null, JSON.stringify(answer), q.explanation ?? null, parentId, nowIso());
+    n++;
+  }
+  return n;
+}
+
 interface EnrichInput {
   itemId: string;
   courseId: string;
@@ -146,6 +174,7 @@ export async function runEnrich(input: EnrichInput, jobId: string): Promise<void
       throw new Error(`A IA recusou por falta de base no material: ${bundle.lesson.reason ?? ""}`);
     }
     db.prepare("UPDATE knowledge_atoms SET course_id = ? WHERE bncc_code = ?").run(item.course_id, code);
+    persistQuestionsToBank(item.course_id, code, bundle.quiz.questions, input.parentId);
 
     // item aponta para o artefato; aguarda aprovação humana
     const payload = { ai: true, bncc_code: code, grade_band: gradeEquiv, age_band: ageBand, lang: "pt" };
