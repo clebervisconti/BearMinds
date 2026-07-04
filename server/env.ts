@@ -50,12 +50,18 @@ export const env = {
   publicOrigin: process.env.PUBLIC_ORIGIN || "http://localhost:5173",
   policyVersion: process.env.POLICY_VERSION || "2026-07-01",
 
-  // LLM
+  // LLM — padrão: Gemma local (MLX no HULK), OpenAI-compatible. Cloud (Gemini/Claude) só se configurado.
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
-  modelDefault: process.env.MODEL_DEFAULT || "gemini-2.5-flash-lite",
-  modelContent: process.env.MODEL_CONTENT || "gemini-2.5-flash",
-  modelMathHard: process.env.MODEL_MATH_HARD || "claude-haiku-4-5",
+  // Endpoint OpenAI-compatible do Gemma/MLX (base termina em /v1). Vazio = sem LLM local.
+  llmBaseUrl: process.env.LLM_BASE_URL || "http://127.0.0.1:8081/v1",
+  llmApiKey: process.env.LLM_API_KEY || "",                       // Bearer opcional (tunnel autenticado)
+  llmCfClientId: process.env.LLM_CF_ACCESS_CLIENT_ID || "",       // Cloudflare Access service token (id)
+  llmCfClientSecret: process.env.LLM_CF_ACCESS_CLIENT_SECRET || "", // Cloudflare Access service token (secret)
+  llmTimeoutMs: Number(process.env.LLM_TIMEOUT_MS || 120000),
+  modelDefault: process.env.MODEL_DEFAULT || "mlx-community/gemma-3-4b-it-4bit",
+  modelContent: process.env.MODEL_CONTENT || "mlx-community/gemma-3-4b-it-4bit",
+  modelMathHard: process.env.MODEL_MATH_HARD || "mlx-community/gemma-3-4b-it-4bit",
 
   // Segredos (dev gera efêmeros; produção exige)
   piiEncryptionKey: required("PII_ENCRYPTION_KEY", () => randomBytes(16).toString("hex")),
@@ -86,4 +92,4 @@ export const env = {
       : randomBytes(16).toString("hex")),
 };
 
-export const llmConfigured = Boolean(env.geminiApiKey || env.anthropicApiKey);
+export const llmConfigured = Boolean(env.geminiApiKey || env.anthropicApiKey || env.llmBaseUrl);

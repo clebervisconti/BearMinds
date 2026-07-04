@@ -11,6 +11,7 @@ export default defineConfig({
       DATABASE_PATH: "./data/test-bearminds.db",
       PII_ENCRYPTION_KEY: "00000000000000000000000000000000",
       SESSION_PEPPER: "11111111111111111111111111111111",
+      LLM_BASE_URL: "", // testes offline: sem LLM (nem cloud nem local) → caminhos de fallback determinísticos
     },
     include: ["tests/**/*.test.ts"],
   },

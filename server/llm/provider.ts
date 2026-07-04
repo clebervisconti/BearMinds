@@ -96,7 +96,46 @@ class ClaudeDriver implements Driver {
   }
 }
 
-const drivers: Driver[] = [new GeminiDriver(), new ClaudeDriver()];
+// Gemma local via MLX (OpenAI-compatible /v1/chat/completions). Sem SDK — fetch puro.
+// Autenticação opcional para o caso tunelado (Cloudflare Access service token ou Bearer).
+class OpenAICompatDriver implements Driver {
+  matches(m: ModelId) {
+    return m.startsWith("mlx-") || m.startsWith("local/") || m.toLowerCase().includes("gemma");
+  }
+  async complete(req: LLMRequest): Promise<LLMResponse> {
+    if (!env.llmBaseUrl) throw new Error("LLM_BASE_URL ausente — endpoint local (MLX/Gemma) não configurado.");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (env.llmApiKey) headers["Authorization"] = `Bearer ${env.llmApiKey}`;
+    if (env.llmCfClientId && env.llmCfClientSecret) {
+      headers["CF-Access-Client-Id"] = env.llmCfClientId;
+      headers["CF-Access-Client-Secret"] = env.llmCfClientSecret;
+    }
+    const res = await fetch(`${env.llmBaseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers,
+      signal: AbortSignal.timeout(env.llmTimeoutMs),
+      body: JSON.stringify({
+        model: req.model,
+        messages: [
+          { role: "system", content: req.system + (req.json ? "\nResponda SOMENTE com JSON válido, sem cercas de código, sem texto fora do JSON." : "") },
+          { role: "user", content: req.user },
+        ],
+        max_tokens: req.maxTokens ?? 2048,
+        temperature: req.temperature ?? 0.4,
+      }),
+    });
+    if (!res.ok) throw new Error(`LLM local HTTP ${res.status}: ${(await res.text().catch(() => "")).slice(0, 300)}`);
+    const d = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+    return {
+      text: d.choices?.[0]?.message?.content ?? "",
+      model: req.model,
+      usage: { inputTokens: d.usage?.prompt_tokens ?? 0, outputTokens: d.usage?.completion_tokens ?? 0 },
+    };
+  }
+}
+
+// Ordem importa: o driver local pega gemma/mlx; gemini/claude ficam disponíveis se configurados.
+const drivers: Driver[] = [new OpenAICompatDriver(), new GeminiDriver(), new ClaudeDriver()];
 
 export async function llm(req: LLMRequest): Promise<LLMResponse> {
   const driver = drivers.find((d) => d.matches(req.model));
