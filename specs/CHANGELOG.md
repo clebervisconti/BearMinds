@@ -1,5 +1,33 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-04 — P5 re-planejado: análise de gap Moodle + MindTickle → spec 15 + backlog P5a/b/c
+
+- **Pesquisa (2 análises paralelas):** Moodle (github.com/moodle/moodle + docs — taxonomia de 23 activity
+  modules, banco de questões 2-eixos tipo×comportamento, availability tree JSON, completion genérica,
+  gradebook, roles-em-contexto, cohorts/grupos, events→relatórios, calendar auto-derivado) e MindTickle
+  (github deles = só forks de infra, zero produto; pesquisa via produto/docs/reviews — Series→Modules,
+  Quick Updates/Checklists, reforço espaçado adaptativo, Missions/role-plays com pré-análise IA + rubrica
+  humana, coaching scorecards, Readiness Index = rollup ponderado de evidências, regras de auto-assignment,
+  IA nos 3 pontos de alavanca: autoria/praticante/revisor).
+- **O que JÁ superamos (não reconstruir):** FSRS por atom > reforço por tópico do MindTickle; autoria IA
+  grounded + sign-off; mastery-gate; live/enquetes/Q&A; DM só aluno↔staff; coaching em risco; certificados.
+- **Novo spec `15-assessment-core.md` (P5a):** events stream · banco de questões desacoplado (IA preenche,
+  professor cura, versões, pools por filtro+sorteio) · provas (sorteio randomizado anti-cola, cronômetro,
+  auto-correção, score→prontidão) · tarefas com submissões + rubricas ponderadas reutilizáveis + IA
+  pré-análise do revisor (nunca nota automática) · motor de desbloqueio (árvore JSON, 3 presets, 🔒 com
+  motivo) · gamificação por faixa etária (8-10 sem ranking individual público — decisão do owner) ·
+  migração v5 aditiva.
+- **Backlog P5b/P5c no `11-roadmap.md`:** P5b = auto-matrícula por regras, rollover de curso, gradebook-lite
+  (1 agregação + prévia), calendário/timeline, relatórios, grupos; P5c = quick updates/checklists,
+  exemplares de pares, auto-avaliação vs professor, Readiness 2.0 (rollup BNCC), Missions-lite (áudio/vídeo
+  com escopo LGPD dedicado — planejar agora, construir por último; decisão do owner). P5-r (pagamento/retenção)
+  inalterado, em paralelo.
+- **Fixes transversais (anti-complaints):** ~5 configurações por tela + "avançado"; defaults opinativos;
+  UI kit único; bloqueado = visível com motivo; sem lockdown browser.
+- Decisões do owner (2026-07-04): wave inicial = P5a; Missions planejada agora com consent scope, build em
+  P5c; gamificação age-banded = sim; pipeline vive em specs + roadmap (sem GitHub Issues).
+- Guardrails (05) e LGPD (09) inalterados em todas as waves.
+
 ## 2026-07-04 — P4b/P4c: aprendizagem ao vivo & social (spec 14) — Kahoot, Slido, chat, coaching, certificados, moderação
 
 - **Novo spec `14-live-social.md`** e **`11-roadmap.md` reconciliado** (P1→redesign→P4a→P4b/P4c entregues; P5/P6 futuros).
