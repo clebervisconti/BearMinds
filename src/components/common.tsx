@@ -1,5 +1,28 @@
 import type { ReactNode } from "react";
 
+// Avatar com iniciais + cor determinística por nome (padrão das plataformas de referência).
+const AV_COLORS = ["#3949ab", "#12805c", "#b54708", "#9f1239", "#0e7490", "#6d28d9", "#a16207", "#be185d"];
+export function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const bg = AV_COLORS[h % AV_COLORS.length];
+  return (
+    <span
+      className="bm-avatar-i"
+      style={{ width: size, height: size, fontSize: size * 0.36, ["--av-bg" as string]: bg }}
+      aria-hidden
+    >
+      {initials || "?"}
+    </span>
+  );
+}
+
 // Companheiro 🐻 (spec 07 §3): âncora de relatedness. P1 = emoji + poses por texto.
 export function Mascot({ mood = "happy", message }: { mood?: "happy" | "think" | "cheer" | "calm"; message?: ReactNode }) {
   const face = { happy: "🐻", think: "🐻‍❄️", cheer: "🐻", calm: "🐻" }[mood];

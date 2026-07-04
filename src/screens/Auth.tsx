@@ -6,14 +6,28 @@ import { ErrorNote, Mascot } from "../components/common";
 
 function AuthShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bm-shell" style={{ maxWidth: 420, display: "grid", gap: "1rem", alignContent: "start", paddingTop: "2rem" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "3rem" }}>🐻</div>
-        <h1 style={{ margin: ".2rem 0" }}>BearMinds</h1>
-        <p style={{ color: "var(--bm-muted)", margin: 0 }}>Aprender, não colar.</p>
+    <div style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: "1.2rem", background: "var(--bm-bg)" }}>
+      <div style={{ width: "100%", maxWidth: 430, display: "grid", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: ".65rem", justifyContent: "center" }}>
+          <span
+            aria-hidden
+            style={{
+              width: 44, height: 44, borderRadius: 12, display: "grid", placeItems: "center", fontSize: "1.4rem",
+              background: "linear-gradient(135deg,#3949ab,#5c6bc0)",
+            }}
+          >
+            🐻
+          </span>
+          <div style={{ lineHeight: 1.1 }}>
+            <div style={{ fontWeight: 750, fontSize: "1.15rem", letterSpacing: "-.01em" }}>BearMinds</div>
+            <div style={{ color: "var(--bm-muted)", fontSize: ".72rem", letterSpacing: ".04em" }}>plataforma de estudos · aprender, não colar</div>
+          </div>
+        </div>
+        <div className="bm-card" style={{ padding: "1.5rem 1.4rem", display: "grid", gap: ".9rem", boxShadow: "var(--bm-shadow-lg)" }}>
+          <h1 style={{ margin: 0, fontSize: "1.2rem", textAlign: "center" }}>{title}</h1>
+          {children}
+        </div>
       </div>
-      <h2 style={{ textAlign: "center" }}>{title}</h2>
-      {children}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+@import "@fontsource-variable/inter";
 @import "./styles/skins.css";
 
 @tailwind base;
@@ -14,12 +15,13 @@
     background: var(--bm-bg);
     color: var(--bm-ink);
     font-family: var(--bm-font);
-    font-size: calc(16px * var(--bm-scale));
-    line-height: 1.5;
-    /* safe-area para PWA em tela cheia no iOS */
+    font-size: calc(15px * var(--bm-scale));
+    line-height: 1.55;
+    letter-spacing: -0.006em;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
       env(safe-area-inset-left);
     min-height: 100dvh;
+    font-feature-settings: "cv11", "ss01";
   }
   * {
     box-sizing: border-box;
@@ -29,64 +31,175 @@
   }
   h1, h2, h3 {
     color: var(--bm-ink);
-    line-height: 1.2;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    font-weight: 650;
   }
+  a { color: var(--bm-primary); }
 }
 
 @layer components {
+  /* ---- superfícies ---- */
   .bm-card {
     background: var(--bm-surface);
     border: 1px solid var(--bm-border);
     border-radius: var(--bm-radius);
-    padding: 1rem;
+    padding: 1.1rem 1.2rem;
+    box-shadow: var(--bm-shadow);
   }
+  .bm-card-flat {
+    background: var(--bm-surface);
+    border: 1px solid var(--bm-border);
+    border-radius: var(--bm-radius);
+  }
+
+  /* ---- tipografia utilitária ---- */
+  .bm-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bm-muted);
+  }
+  .bm-meta {
+    font-size: 0.8rem;
+    color: var(--bm-muted);
+  }
+
+  /* ---- botões ---- */
   .bm-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    min-height: 44px; /* alvo de toque acessível */
-    padding: 0.65rem 1.1rem;
-    border-radius: calc(var(--bm-radius) * 0.8);
+    gap: 0.45rem;
+    min-height: 42px;
+    padding: 0.55rem 1.1rem;
+    border-radius: 10px;
     background: var(--bm-primary);
     color: var(--bm-primary-ink);
     border: 0;
     font-weight: 600;
+    font-size: 0.92rem;
     cursor: pointer;
-    transition:
-      transform 0.06s ease,
-      filter 0.15s ease;
+    transition: transform 0.06s ease, filter 0.15s ease, background 0.15s ease;
   }
-  .bm-btn:active {
-    transform: translateY(1px) scale(0.99);
-  }
-  .bm-btn:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
+  .bm-btn:hover { filter: brightness(1.06); }
+  .bm-btn:active { transform: translateY(1px); }
+  .bm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .bm-btn-ghost {
     background: transparent;
     color: var(--bm-primary);
     border: 1px solid var(--bm-border);
   }
+  .bm-btn-ghost:hover { background: var(--bm-surface-2); filter: none; }
+  .bm-btn-quiet {
+    background: transparent;
+    color: var(--bm-muted);
+    border: 0;
+    min-height: 36px;
+    padding: 0.35rem 0.7rem;
+  }
+  .bm-btn-quiet:hover { color: var(--bm-ink); background: var(--bm-surface-2); filter: none; }
+  .bm-btn-sm { min-height: 34px; padding: 0.3rem 0.8rem; font-size: 0.85rem; }
+
+  /* ---- inputs ---- */
   .bm-input {
     width: 100%;
-    min-height: 44px;
-    padding: 0.6rem 0.8rem;
-    border-radius: calc(var(--bm-radius) * 0.7);
+    min-height: 42px;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
     border: 1px solid var(--bm-border);
     background: var(--bm-surface);
     color: var(--bm-ink);
-    font-size: 1rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease;
   }
   .bm-input:focus {
-    outline: 2px solid var(--bm-primary);
-    outline-offset: 1px;
+    outline: none;
+    border-color: var(--bm-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bm-primary) 14%, transparent);
   }
+
+  /* ---- tabs (Olympus-style, sublinhado) ---- */
+  .bm-tabs {
+    display: flex;
+    gap: 1.4rem;
+    border-bottom: 1px solid var(--bm-border);
+  }
+  .bm-tabitem {
+    background: none;
+    border: 0;
+    padding: 0.55rem 0.15rem;
+    font-size: 0.92rem;
+    font-weight: 550;
+    color: var(--bm-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .bm-tabitem.active {
+    color: var(--bm-primary);
+    border-bottom-color: var(--bm-primary);
+    font-weight: 650;
+  }
+
+  /* ---- chips / pills ---- */
+  .bm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: var(--bm-surface-2);
+    font-size: 0.82rem;
+    font-weight: 550;
+    color: var(--bm-ink);
+    border: 1px solid transparent;
+  }
+  .bm-chip-outline {
+    background: var(--bm-surface);
+    border-color: var(--bm-border);
+  }
+
+  /* ---- linhas de lista (Olympus rows) ---- */
+  .bm-row {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.85rem 1.1rem;
+    background: var(--bm-surface);
+    border: 1px solid var(--bm-border);
+    border-radius: var(--bm-radius);
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  button.bm-row { cursor: pointer; width: 100%; text-align: left; font: inherit; color: inherit; }
+  .bm-row:hover { border-color: color-mix(in srgb, var(--bm-primary) 35%, var(--bm-border)); box-shadow: var(--bm-shadow); }
+  .bm-row .thumb {
+    width: 44px; height: 44px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; font-size: 1.25rem;
+    background: var(--bm-surface-2);
+  }
+
+  /* ---- avatar com iniciais ---- */
+  .bm-avatar-i {
+    width: 36px; height: 36px; border-radius: 999px; flex: none;
+    display: grid; place-items: center;
+    font-size: 0.82rem; font-weight: 700; color: #fff;
+    background: var(--av-bg, var(--bm-primary));
+  }
+
+  /* ---- shell / página ---- */
   .bm-shell {
     max-width: 640px;
     margin: 0 auto;
     padding: 1rem;
     min-height: 100dvh;
   }
+  .bm-page-head { margin: 0 0 1.2rem; }
+  .bm-page-head h1 { font-size: 1.45rem; margin: 0; }
+  .bm-page-head .sub { color: var(--bm-muted); margin-top: 0.25rem; font-size: 0.92rem; }
+
+  /* ---- progress ring util ---- */
+  .bm-divider { border: 0; border-top: 1px solid var(--bm-border); margin: 0.9rem 0; }
 }

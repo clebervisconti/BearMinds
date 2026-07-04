@@ -7,40 +7,42 @@
 
 :root {
   --bm-radius: 12px;
-  --bm-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bm-font: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bm-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --bm-shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.08);
 
   /* fallback = formal */
-  --bm-bg: #f6f7fb;
+  --bm-bg: #f7f8fa;
   --bm-surface: #ffffff;
-  --bm-surface-2: #eef0f7;
-  --bm-ink: #1c2333;
-  --bm-muted: #64708a;
-  --bm-primary: #3f51b5;
+  --bm-surface-2: #f1f3f7;
+  --bm-ink: #101828;
+  --bm-muted: #667085;
+  --bm-primary: #3949ab;
   --bm-primary-ink: #ffffff;
-  --bm-accent: #2e9e6b;
-  --bm-success: #22a35e;
-  --bm-warn: #d98a0b;
-  --bm-danger: #d64545;
-  --bm-border: #e2e6f0;
+  --bm-accent: #12805c;
+  --bm-success: #12805c;
+  --bm-warn: #b54708;
+  --bm-danger: #d92d20;
+  --bm-border: #e4e7ec;
 
   --bm-scale: 1;
 }
 
-/* FORMAL (spec 12) — acadêmico calmo: indigo/slate, espaço generoso, sem ruído */
+/* FORMAL (spec 12) — plataforma acadêmica: neutros frios, indigo profundo, elevação sutil */
 [data-skin="formal"] {
   --bm-radius: 12px;
-  --bm-bg: #f6f7fb;
+  --bm-bg: #f7f8fa;
   --bm-surface: #ffffff;
-  --bm-surface-2: #eef0f7;
-  --bm-ink: #1c2333;
-  --bm-muted: #64708a;
-  --bm-primary: #3f51b5;
+  --bm-surface-2: #f1f3f7;
+  --bm-ink: #101828;
+  --bm-muted: #667085;
+  --bm-primary: #3949ab;
   --bm-primary-ink: #ffffff;
-  --bm-accent: #2e9e6b;
-  --bm-success: #22a35e;
-  --bm-warn: #d98a0b;
-  --bm-danger: #d64545;
-  --bm-border: #e2e6f0;
+  --bm-accent: #12805c;
+  --bm-success: #12805c;
+  --bm-warn: #b54708;
+  --bm-danger: #d92d20;
+  --bm-border: #e4e7ec;
   --bm-scale: 1;
 }
 
