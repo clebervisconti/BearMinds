@@ -222,6 +222,10 @@ export const api = {
   certificates: (child_id: string) => req<{ certificates: { code: string; issued_at: string; course_title: string; cover_emoji: string }[] }>("GET", `/certificates?child_id=${encodeURIComponent(child_id)}`),
   certVerify: (code: string) => req<{ code: string; issued_at: string; student: string; course_title: string; institution: string | null }>("GET", `/cert/${encodeURIComponent(code)}`),
 
+  // ---- Modelo de IA (platform_admin) ----
+  aiModelGet: () => req<{ current: string; default: string; options: AiModelOption[] }>("GET", "/admin/ai-model"),
+  aiModelSet: (model: string) => req<{ ok: true; current: string }>("POST", "/admin/ai-model", { model }),
+
   // ---- Moderation ----
   moderation: () => req<{ items: ModItem[]; count: number }>("GET", "/admin/moderation"),
   moderationHide: (kind: string, id: string) => req<{ ok: true }>("POST", "/admin/moderation/hide", { kind, id }),
@@ -280,6 +284,7 @@ export interface CoachStudent {
   flags: { streak_broken: boolean; low_readiness: boolean; inactive_7d: boolean };
 }
 export interface ModItem { kind: string; label: string; id: string; body: string; created_at: string }
+export interface AiModelOption { id: string; label: string; provider: "local" | "gemini" | "claude"; note?: string; default: boolean }
 
 // ---- Tipos LMS (client-side) ----
 export interface AdminCourse {

@@ -10,6 +10,8 @@ import {
 import { readJson, badRequest, forbidden, notFound, conflict, type AppEnv } from "../lib/http.ts";
 import { hashPassword } from "../lib/crypto.ts";
 import { audit } from "../lib/audit.ts";
+import { setSetting } from "../lib/settings.ts";
+import { activeModel, availableModels, DEFAULT_MODEL } from "../llm/router.ts";
 
 const app = new Hono<AppEnv>();
 app.use("/api/admin/*", csrfGuard);
@@ -189,6 +191,26 @@ app.get("/api/admin/students", requireParent, requireRole("professor", "institut
     )
     .all(inst) as Record<string, unknown>[];
   return c.json({ students: rows });
+});
+
+// ---------- Modelo de IA (platform_admin) — escolha o modelo, padrão = Gemma local ----------
+app.get("/api/admin/ai-model", requireParent, requireRole("platform_admin"), (c) => {
+  return c.json({
+    current: activeModel(),
+    default: DEFAULT_MODEL,
+    options: availableModels(),
+  });
+});
+
+app.post("/api/admin/ai-model", requireParent, requireRole("platform_admin"), async (c) => {
+  const { model } = await readJson(c, z.object({ model: z.string().min(1) }));
+  const avail = availableModels();
+  if (!avail.some((m) => m.id === model)) {
+    throw badRequest("model_unavailable", "Modelo indisponível (provedor não configurado).");
+  }
+  setSetting("ai_model", model);
+  audit(`parent:${c.get("parentId")}`, "set_ai_model", model);
+  return c.json({ ok: true, current: model });
 });
 
 export default app;

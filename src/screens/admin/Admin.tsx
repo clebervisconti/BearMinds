@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "../../components/AppShell";
 import { BearLoader, ErrorNote } from "../../components/common";
-import { api, ApiError, type AdminCourse } from "../../lib/api";
+import { api, ApiError, type AdminCourse, type AiModelOption } from "../../lib/api";
 import { useMe, useInstitutions } from "../../lib/queries";
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -79,6 +79,8 @@ export function Admin() {
         </div>
       )}
 
+      {role === "platform_admin" && <AiModelCard />}
+
       {creating && (
         <CreateCourse
           defaultInstitution={myInst ?? "bncc-padrao"}
@@ -120,6 +122,65 @@ export function Admin() {
         @media(min-width:920px){.bm-adm-stats{grid-template-columns:repeat(4,1fr)}}
       `}</style>
     </AppShell>
+  );
+}
+
+const PROVIDER_LABEL: Record<string, string> = { local: "Local (HULK · MLX)", gemini: "Google Gemini", claude: "Anthropic Claude" };
+
+// Seletor do modelo de IA (platform_admin) — padrão = Gemma local; demais opções se o provedor estiver configurado.
+function AiModelCard() {
+  const [data, setData] = useState<{ current: string; default: string; options: AiModelOption[] } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const load = () => api.aiModelGet().then(setData).catch((e) => setErr(e instanceof ApiError ? e.message : "Erro."));
+  useEffect(() => { void load(); }, []);
+
+  async function choose(id: string) {
+    if (!data || id === data.current) return;
+    setBusy(id); setErr(null);
+    try { await api.aiModelSet(id); await load(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Erro ao trocar."); }
+    finally { setBusy(null); }
+  }
+
+  const cur = data?.options.find((o) => o.id === data.current);
+  return (
+    <div className="bm-card" style={{ marginBottom: "1rem", display: "grid", gap: ".5rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
+        <span aria-hidden style={{ fontSize: "1.2rem" }}>🧠</span>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ fontWeight: 650 }}>Modelo de IA</div>
+          <div className="bm-meta">Usado em toda geração (lições, quizzes, provas, tarefas). {cur ? <>Ativo: <b>{cur.label}</b> · {PROVIDER_LABEL[cur.provider]}</> : "…"}</div>
+        </div>
+        <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Trocar"}</button>
+      </div>
+      {err && <ErrorNote>{err}</ErrorNote>}
+      {open && data && (
+        <div style={{ display: "grid", gap: ".45rem" }}>
+          {data.options.map((o) => {
+            const active = o.id === data.current;
+            return (
+              <button key={o.id} className="bm-row" onClick={() => choose(o.id)} disabled={!!busy}
+                style={{ borderColor: active ? "var(--bm-primary)" : "var(--bm-border)", background: active ? "color-mix(in srgb,var(--bm-primary) 8%,transparent)" : "var(--bm-surface)" }}>
+                <span className="thumb" aria-hidden>{o.provider === "local" ? "🖥️" : o.provider === "gemini" ? "✦" : "◆"}</span>
+                <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                  <div style={{ fontWeight: 620 }}>
+                    {o.label}
+                    {o.default && <span className="bm-chip" style={{ fontSize: ".66rem", marginLeft: ".4rem" }}>padrão</span>}
+                    {active && <span className="bm-chip" style={{ fontSize: ".66rem", marginLeft: ".4rem", color: "var(--bm-success)" }}>✓ ativo</span>}
+                  </div>
+                  <div className="bm-meta">{PROVIDER_LABEL[o.provider]}{o.note ? ` · ${o.note}` : ""}</div>
+                </div>
+                {busy === o.id && <span className="bm-meta">trocando…</span>}
+              </button>
+            );
+          })}
+          <p className="bm-meta" style={{ margin: 0 }}>Só modelos com provedor configurado aparecem. O padrão é o Gemma local (privado, sem custo de API).</p>
+        </div>
+      )}
+    </div>
   );
 }
 

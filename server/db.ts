@@ -581,6 +581,13 @@ CREATE TABLE IF NOT EXISTS submission_reviews (
   created_at TEXT NOT NULL
 );
 
+-- ===== CONFIG DA PLATAFORMA v6 (chave→valor; ex.: modelo de IA ativo) =====
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- ===== METRICS (privacy-preserving, agregados — spec 09.3) =====
 CREATE TABLE IF NOT EXISTS metrics_daily (
   day TEXT PRIMARY KEY,
@@ -632,7 +639,7 @@ CREATE INDEX IF NOT EXISTS idx_subrev_sub ON submission_reviews(submission_id);
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 let initialized = false;
 
 function ensureColumns(table: string, defs: Record<string, string>): void {
