@@ -384,6 +384,113 @@ CREATE TABLE IF NOT EXISTS enrich_jobs (
   updated_at TEXT
 );
 
+-- ===== LIVE & SOCIAL v4 (spec 14): games ao vivo, enquetes, Q&A, chat, coaching, certificados =====
+CREATE TABLE IF NOT EXISTS live_sessions (
+  id TEXT PRIMARY KEY,
+  pin TEXT UNIQUE NOT NULL,
+  item_id TEXT NOT NULL,
+  course_id TEXT NOT NULL,
+  host_parent TEXT NOT NULL,
+  state TEXT DEFAULT 'lobby' CHECK(state IN ('lobby','question','reveal','ended')),
+  current_q INTEGER DEFAULT -1,
+  q_started_at TEXT,
+  created_at TEXT NOT NULL,
+  ended_at TEXT
+);
+CREATE TABLE IF NOT EXISTS live_players (
+  session_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  nickname TEXT NOT NULL,
+  score INTEGER DEFAULT 0,
+  joined_at TEXT NOT NULL,
+  PRIMARY KEY (session_id, child_id)
+);
+CREATE TABLE IF NOT EXISTS live_answers (
+  session_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  q_index INTEGER NOT NULL,
+  choice INTEGER,
+  correct INTEGER,
+  ms INTEGER,
+  delta INTEGER,
+  PRIMARY KEY (session_id, child_id, q_index)
+);
+
+CREATE TABLE IF NOT EXISTS polls (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  created_by TEXT NOT NULL,
+  question TEXT NOT NULL,
+  options_json TEXT NOT NULL,
+  open INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS poll_votes (
+  poll_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  choice INTEGER NOT NULL,
+  PRIMARY KEY (poll_id, child_id)
+);
+
+CREATE TABLE IF NOT EXISTS qa_questions (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  answered INTEGER DEFAULT 0,
+  flagged INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+CREATE TABLE IF NOT EXISTS qa_votes (
+  question_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  PRIMARY KEY (question_id, child_id)
+);
+
+CREATE TABLE IF NOT EXISTS chat_channels (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS chat_threads (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  staff_parent_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(course_id, child_id, staff_parent_id)
+);
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  scope TEXT NOT NULL CHECK(scope IN ('channel','thread')),
+  scope_id TEXT NOT NULL,
+  sender_child_id TEXT,
+  sender_parent_id TEXT,
+  sender_name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  flagged INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tutor_notes (
+  id TEXT PRIMARY KEY,
+  tutor_parent_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS certificates (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  course_id TEXT NOT NULL,
+  code TEXT UNIQUE NOT NULL,
+  issued_at TEXT NOT NULL,
+  UNIQUE(child_id, course_id)
+);
+
 -- ===== METRICS (privacy-preserving, agregados — spec 09.3) =====
 CREATE TABLE IF NOT EXISTS metrics_daily (
   day TEXT PRIMARY KEY,
@@ -417,10 +524,15 @@ CREATE INDEX IF NOT EXISTS idx_enroll_course ON enrollments(course_id);
 CREATE INDEX IF NOT EXISTS idx_iprog_child ON item_progress(child_id);
 CREATE INDEX IF NOT EXISTS idx_invites_token ON invites(token);
 CREATE INDEX IF NOT EXISTS idx_ejobs_item ON enrich_jobs(item_id, status);
+CREATE INDEX IF NOT EXISTS idx_live_pin ON live_sessions(pin);
+CREATE INDEX IF NOT EXISTS idx_qa_course ON qa_questions(course_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_chatmsg_scope ON chat_messages(scope, scope_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_threads_child ON chat_threads(child_id);
+CREATE INDEX IF NOT EXISTS idx_certs_code ON certificates(code);
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 let initialized = false;
 
 function ensureColumns(table: string, defs: Record<string, string>): void {
