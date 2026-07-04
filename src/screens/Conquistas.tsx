@@ -23,7 +23,7 @@ const REASON_LABEL: Record<string, string> = {
   streak_30: "Marco: 30 dias",
 };
 
-const RANK_BG = ["#12805c", "#3949ab", "#7c3aed"];
+const RANK_BG = ["#1e1e1e", "#565656", "#8a8a8a"];
 
 export function Conquistas() {
   const me = useMe();
@@ -101,7 +101,7 @@ export function Conquistas() {
               <div className="bm-eyebrow">Sua turma esta semana</div>
               <div style={{ fontWeight: 650, fontSize: ".92rem" }}>{board.data?.institution ?? "Sua instituição"}</div>
               <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                <div><div style={{ fontSize: "1.5rem", fontWeight: 750, color: "var(--bm-primary)" }}>🪙 {classCoins}</div><div className="bm-eyebrow">moedas da turma</div></div>
+                <div><div style={{ fontSize: "1.5rem", fontWeight: 750, color: "var(--bm-link)" }}>🪙 {classCoins}</div><div className="bm-eyebrow">moedas da turma</div></div>
                 <div><div style={{ fontSize: "1.5rem", fontWeight: 750 }}>{classLearners}</div><div className="bm-eyebrow">colegas ativos</div></div>
               </div>
               <div className="bm-card-flat" style={{ padding: ".6rem .8rem", background: "var(--bm-surface-2)" }}>
@@ -154,7 +154,7 @@ export function Conquistas() {
       <style>{`
         .bm-achv{display:grid;gap:1rem}
         .bm-achv-hero{display:flex;align-items:center;gap:1.1rem;border-radius:var(--bm-radius);padding:1.3rem 1.4rem;
-          background:linear-gradient(120deg,#283593 0%,#3949ab 55%,#5e35b1 100%);box-shadow:var(--bm-shadow)}
+          background:linear-gradient(120deg,#1e1e1e 0%,#123a00 130%);box-shadow:var(--bm-shadow)}
         .bm-badges{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
         @media(min-width:920px){
           .bm-achv{grid-template-columns:minmax(0,1fr) 320px;gap:1.4rem}

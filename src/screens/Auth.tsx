@@ -13,7 +13,7 @@ function AuthShell({ title, children }: { title: string; children: React.ReactNo
             aria-hidden
             style={{
               width: 44, height: 44, borderRadius: 12, display: "grid", placeItems: "center", fontSize: "1.4rem",
-              background: "linear-gradient(135deg,#3949ab,#5c6bc0)",
+              background: "linear-gradient(135deg,#28d600,#1faf00)",
             }}
           >
             🐻

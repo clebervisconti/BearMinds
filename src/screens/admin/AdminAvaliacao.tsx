@@ -25,7 +25,7 @@ export function AdminAvaliacao() {
       <style>{`
         .bm-tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--bm-border);margin-bottom:1rem;flex-wrap:wrap}
         .bm-tab-btn{padding:.55rem .9rem;border:0;background:none;color:var(--bm-muted);font-weight:600;font-size:.9rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-        .bm-tab-btn.active{color:var(--bm-primary);border-bottom-color:var(--bm-primary)}
+        .bm-tab-btn.active{color:var(--bm-link);border-bottom-color:var(--bm-primary)}
       `}</style>
     </AppShell>
   );
@@ -63,7 +63,7 @@ function Banco({ courseId }: { courseId: string }) {
         <div key={q.id} className="bm-card" style={{ display: "grid", gap: ".4rem", opacity: q.status === "retired" ? 0.55 : 1 }}>
           <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
             <span className="bm-chip bm-chip-outline" style={{ fontSize: ".7rem" }}>{KIND_LABEL[q.kind]}</span>
-            {q.origin === "ai" && <span className="bm-chip" style={{ fontSize: ".7rem", color: "var(--bm-primary)" }}>✨ IA</span>}
+            {q.origin === "ai" && <span className="bm-chip" style={{ fontSize: ".7rem", color: "var(--bm-link)" }}>✨ IA</span>}
             <span className="bm-chip bm-chip-outline" style={{ fontSize: ".7rem", color: q.status === "approved" ? "var(--bm-success)" : q.status === "retired" ? "var(--bm-muted)" : "var(--bm-warn)" }}>{q.status}</span>
             {q.bncc_code && <span className="bm-meta">{q.bncc_code}</span>}
             <span className="bm-meta">dif. {q.difficulty}{q.version && q.version > 1 ? ` · v${q.version}` : ""}</span>

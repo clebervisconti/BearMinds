@@ -1,5 +1,26 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-04 — Tema CYBERSPHERE Design System (light) aplicado à plataforma inteira
+
+- **Fonte da verdade:** skill `cs-branding` (o projeto claude.ai/design não é acessível em sessão headless
+  — DesignSync exige login interativo). Tokens light oficiais aplicados.
+- **Paleta (skin `formal` + `:root`, plataforma toda):** bg `#f5f5f5` (canvas) · surface `#ffffff` (cards) ·
+  surface-2 `#ececec` · ink **Preto Neural `#1e1e1e`** · muted `#5f5f5f` · primary/accent **Verde Ascensão `#28d600`**
+  (só FILL/regra) · primary-ink `#1e1e1e` (texto sobre verde = CTA CYBERSPHERE) · novo `--bm-link` `#1e1e1e`
+  (texto interativo escuro) · success `#178000` (verde escuro legível) · border `#e2e2e2`.
+- **Regra de marca no claro respeitada:** Verde nunca é texto no branco — só preenchimento (botões, logo,
+  pílula de nav ativa, selo do certificado) e regra (sublinhado de link, borda inferior de aba/curso, barra
+  de progresso). Links = escuro + sublinhado Verde. Todos os `color:var(--bm-primary)` de texto (8 inline +
+  abas locais + badges live) trocados por `--bm-link`.
+- **Tipografia:** Inter → **Plus Jakarta Sans** (títulos/CTAs/eyebrows, variable, self-hosted via
+  `@fontsource-variable/plus-jakarta-sans`) + **Poppins** (corpo, `@fontsource/poppins` 300–700). Self-hosted
+  para respeitar o CSP estrito (sem Google Fonts externo).
+- **Cromo rebrandizado:** logo-mark (Verde), heros Conquistas/Comunidade (Preto Neural → verde-black), pílulas
+  de ranking (monocromático escuro), avatares (indigo→verde-dark), página pública de certificado (selo Verde,
+  títulos Preto Neural, regra verde). Skins infantis da Aula (8-10/11-14/15-18) **intocadas** (decisão do owner).
+- Verificado: tsc/build verdes, preview desktop+mobile (tokens `#f5f5f5`/`#1e1e1e`/`#28d600` + Jakarta/Poppins
+  confirmados), sem erros de console.
+
 ## 2026-07-04 — P5a ENTREGUE (spec 15): assessment core — banco, provas, tarefas, rubricas, desbloqueio
 
 - **Migração v5 aditiva:** `events`, `bank_questions`, `exams`, `exam_attempts`, `rubrics`, `submissions`,

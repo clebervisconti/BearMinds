@@ -18,7 +18,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)} d`;
 }
 
-const RANK_BG = ["#12805c", "#3949ab", "#7c3aed"];
+const RANK_BG = ["#1e1e1e", "#565656", "#8a8a8a"];
 
 export function Comunidade() {
   const me = useMe();
@@ -114,7 +114,7 @@ export function Comunidade() {
               </div>
               <div className="bm-meta" style={{ display: "flex", gap: "1rem" }}>
                 <span>💬 {p.replies ?? 0} {p.replies === 1 ? "resposta" : "respostas"}</span>
-                <span style={{ color: "var(--bm-primary)", fontWeight: 600 }}>participar →</span>
+                <span style={{ color: "var(--bm-link)", fontWeight: 600 }}>participar →</span>
               </div>
             </button>
           ))}
@@ -159,7 +159,7 @@ export function Comunidade() {
       <style>{`
         .bm-comm{display:grid;gap:1rem}
         .bm-comm-banner{border-radius:var(--bm-radius);padding:1.4rem 1.4rem;min-height:110px;display:flex;align-items:flex-end;
-          background:linear-gradient(120deg,#283593 0%,#3949ab 45%,#5e35b1 100%);
+          background:linear-gradient(120deg,#1e1e1e 0%,#123a00 130%);
           background-size:cover;box-shadow:var(--bm-shadow)}
         @media(min-width:920px){.bm-comm{grid-template-columns:minmax(0,1fr) 300px;gap:1.4rem}}
       `}</style>

@@ -1,4 +1,10 @@
-@import "@fontsource-variable/inter";
+/* CYBERSPHERE Design System (light): Plus Jakarta Sans (títulos) + Poppins (corpo) — self-hosted (CSP). */
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource/poppins/300.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
 @import "./styles/skins.css";
 
 @tailwind base;
@@ -29,13 +35,19 @@
   button {
     font-family: inherit;
   }
-  h1, h2, h3 {
+  h1, h2, h3, h4 {
     color: var(--bm-ink);
-    line-height: 1.25;
-    letter-spacing: -0.015em;
-    font-weight: 650;
+    font-family: var(--bm-font-heading);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    font-weight: 700;
   }
-  a { color: var(--bm-primary); }
+  /* CYBERSPHERE light: link escuro com sublinhado Verde Ascensão (nunca texto verde no branco). */
+  a {
+    color: var(--bm-link);
+    text-decoration-color: var(--bm-accent);
+    text-underline-offset: 2px;
+  }
 }
 
 @layer components {
@@ -55,8 +67,9 @@
 
   /* ---- tipografia utilitária ---- */
   .bm-eyebrow {
+    font-family: var(--bm-font-heading);
     font-size: 0.68rem;
-    font-weight: 650;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.09em;
     color: var(--bm-muted);
@@ -78,20 +91,22 @@
     background: var(--bm-primary);
     color: var(--bm-primary-ink);
     border: 0;
+    font-family: var(--bm-font-heading);
     font-weight: 600;
     font-size: 0.92rem;
     cursor: pointer;
     transition: transform 0.06s ease, filter 0.15s ease, background 0.15s ease;
   }
-  .bm-btn:hover { filter: brightness(1.06); }
+  .bm-btn:hover { filter: brightness(0.96); }
   .bm-btn:active { transform: translateY(1px); }
   .bm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .bm-btn-ghost {
     background: transparent;
-    color: var(--bm-primary);
+    color: var(--bm-link);
     border: 1px solid var(--bm-border);
+    font-weight: 600;
   }
-  .bm-btn-ghost:hover { background: var(--bm-surface-2); filter: none; }
+  .bm-btn-ghost:hover { background: var(--bm-surface-2); filter: none; border-color: var(--bm-primary); }
   .bm-btn-quiet {
     background: transparent;
     color: var(--bm-muted);
@@ -139,9 +154,9 @@
     margin-bottom: -1px;
   }
   .bm-tabitem.active {
-    color: var(--bm-primary);
+    color: var(--bm-link);
     border-bottom-color: var(--bm-primary);
-    font-weight: 650;
+    font-weight: 700;
   }
 
   /* ---- chips / pills ---- */

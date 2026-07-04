@@ -95,7 +95,7 @@ export function Cursos() {
                     : "em breve"}
                 </div>
               </div>
-              {isEnrolled && <span style={{ color: "var(--bm-primary)", fontWeight: 700 }}>→</span>}
+              {isEnrolled && <span style={{ color: "var(--bm-link)", fontWeight: 700 }}>→</span>}
             </button>
           );
         })}
@@ -139,9 +139,9 @@ function CourseCatalog({ childId }: { childId: string }) {
             {cs.completed_at ? (
               <span className="bm-chip" style={{ color: "var(--bm-success)", fontWeight: 700 }}>✓</span>
             ) : cs.enrolled ? (
-              <span className="bm-chip bm-chip-outline" style={{ color: "var(--bm-primary)" }}>inscrito</span>
+              <span className="bm-chip bm-chip-outline" style={{ color: "var(--bm-link)" }}>inscrito</span>
             ) : (
-              <span style={{ color: "var(--bm-primary)", fontWeight: 700 }}>→</span>
+              <span style={{ color: "var(--bm-link)", fontWeight: 700 }}>→</span>
             )}
           </button>
         ))}

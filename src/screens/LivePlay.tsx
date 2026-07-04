@@ -200,7 +200,7 @@ const styles = (
   <style>{`
     .bm-live-enter{max-width:440px;margin:1rem auto;display:grid;gap:.9rem;justify-items:center;text-align:center}
     .bm-live-enter h1{font-size:1.6rem}
-    .bm-live-badge{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:var(--bm-primary);
+    .bm-live-badge{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:var(--bm-link);
       background:color-mix(in srgb,var(--bm-primary) 12%,transparent);padding:.3rem .7rem;border-radius:999px}
     .bm-pin-input{font-size:2.6rem;font-weight:800;letter-spacing:.5rem;text-align:center;width:100%;
       padding:.8rem .5rem;border:2px solid var(--bm-border);border-radius:16px;background:var(--bm-surface);color:var(--bm-ink)}

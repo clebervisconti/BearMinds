@@ -46,22 +46,25 @@ export function Certificado() {
         <Link to="/" className="bm-cert-home">← BearMinds</Link>
       </div>
       <style>{`
+        /* CYBERSPHERE light: fundo neutro, selo Verde Ascensão, títulos Preto Neural, verde só em regra/badge. */
         .bm-cert-page{min-height:100dvh;display:grid;place-items:center;padding:1.5rem;
-          background:linear-gradient(160deg,#eef1fb,#f7f5ef)}
-        .bm-cert-card{max-width:560px;width:100%;background:#fff;border:1px solid #e6e3da;border-radius:20px;
-          padding:2.4rem 2rem;text-align:center;box-shadow:0 20px 60px rgba(30,40,90,.12);display:grid;gap:.5rem;justify-items:center}
-        .bm-cert-seal{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#3949ab,#5c6bc0);
+          font-family:"Poppins",system-ui,sans-serif;
+          background:linear-gradient(160deg,#f5f5f5,#ffffff)}
+        .bm-cert-card{max-width:560px;width:100%;background:#fff;border:1px solid #e2e2e2;border-radius:20px;
+          padding:2.4rem 2rem;text-align:center;box-shadow:0 20px 60px rgba(30,30,30,.10);display:grid;gap:.5rem;justify-items:center;
+          border-top:5px solid #28d600}
+        .bm-cert-seal{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#28d600,#1faf00);
           display:grid;place-items:center;font-size:2rem;margin-bottom:.4rem}
-        .bm-cert-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.14em;color:#3949ab;text-transform:uppercase}
-        .bm-cert-intro{color:#6b6b6b;margin:.3rem 0 0;font-size:.9rem}
-        .bm-cert-name{font-size:2rem;line-height:1.1;color:#1a1a2e;margin:.1rem 0}
-        .bm-cert-course{font-size:1.25rem;color:#3949ab;margin:.1rem 0}
-        .sub{color:#6b6b6b;font-size:.9rem;margin:0}
-        .bm-cert-meta{display:flex;flex-wrap:wrap;gap:.4rem 1rem;justify-content:center;margin-top:.9rem;color:#6b6b6b;font-size:.82rem}
-        .bm-cert-code{font-family:ui-monospace,monospace;background:#f0f0f5;padding:.1rem .5rem;border-radius:6px}
-        .bm-cert-badge{margin-top:1rem;font-size:.82rem;color:#12805c;background:#e7f5ef;padding:.5rem .8rem;border-radius:10px}
-        .bm-cert-home{margin-top:1.4rem;color:#6b6b6b;text-decoration:none;font-size:.85rem}
-        h1,h2{margin:0}
+        .bm-cert-eyebrow{font-family:"Plus Jakarta Sans Variable","Plus Jakarta Sans",sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.14em;color:#1e1e1e;text-transform:uppercase}
+        .bm-cert-intro{color:#5f5f5f;margin:.3rem 0 0;font-size:.9rem}
+        .bm-cert-name{font-family:"Plus Jakarta Sans Variable","Plus Jakarta Sans",sans-serif;font-size:2rem;line-height:1.1;color:#1e1e1e;margin:.1rem 0}
+        .bm-cert-course{font-family:"Plus Jakarta Sans Variable","Plus Jakarta Sans",sans-serif;font-size:1.25rem;color:#1e1e1e;margin:.1rem 0;border-bottom:3px solid #28d600;display:inline-block;padding-bottom:.15rem}
+        .sub{color:#5f5f5f;font-size:.9rem;margin:0}
+        .bm-cert-meta{display:flex;flex-wrap:wrap;gap:.4rem 1rem;justify-content:center;margin-top:.9rem;color:#5f5f5f;font-size:.82rem}
+        .bm-cert-code{font-family:ui-monospace,monospace;background:#ececec;padding:.1rem .5rem;border-radius:6px}
+        .bm-cert-badge{margin-top:1rem;font-size:.82rem;color:#178000;background:#e8f9e2;padding:.5rem .8rem;border-radius:10px}
+        .bm-cert-home{margin-top:1.4rem;color:#1e1e1e;text-decoration:none;font-size:.85rem}
+        h1,h2{margin:0;font-family:"Plus Jakarta Sans Variable","Plus Jakarta Sans",sans-serif}
       `}</style>
     </div>
   );

@@ -133,7 +133,7 @@ function SettingsBody() {
           {me.data.children.map((c) => (
             <div key={c.id} style={{ display: "flex", justifyContent: "space-between", fontSize: ".92rem" }}>
               <span>{c.kind === "self" ? "🎓" : "🐻"} {c.display_name} <em style={{ color: "var(--bm-muted)", fontStyle: "normal" }}>· {c.grade}</em></span>
-              {c.id === child.id && <span style={{ color: "var(--bm-primary)", fontWeight: 600 }}>ativo</span>}
+              {c.id === child.id && <span style={{ color: "var(--bm-link)", fontWeight: 600 }}>ativo</span>}
             </div>
           ))}
         </div>

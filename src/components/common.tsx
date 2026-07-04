@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 // Avatar com iniciais + cor determinística por nome (padrão das plataformas de referência).
-const AV_COLORS = ["#3949ab", "#12805c", "#b54708", "#9f1239", "#0e7490", "#6d28d9", "#a16207", "#be185d"];
+const AV_COLORS = ["#157a00", "#0e7490", "#b54708", "#9f1239", "#0e7490", "#6d28d9", "#a16207", "#be185d"];
 export function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   const initials = name
     .trim()

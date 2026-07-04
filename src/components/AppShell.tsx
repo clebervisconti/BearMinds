@@ -105,14 +105,14 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
         .bm-topnav{position:sticky;top:0;z-index:40;background:var(--bm-surface);border-bottom:1px solid var(--bm-border)}
         .bm-topnav-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:1.4rem;padding:.55rem 1.2rem;min-height:60px}
         .bm-logo{display:flex;align-items:center;gap:.55rem;text-decoration:none;color:var(--bm-ink)}
-        .bm-logo-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#3949ab,#5c6bc0);display:grid;place-items:center;font-size:1.05rem}
+        .bm-logo-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#28d600,#1faf00);display:grid;place-items:center;font-size:1.05rem}
         .bm-logo-txt{display:flex;flex-direction:column;line-height:1.05}
         .bm-logo-txt strong{font-size:.98rem;letter-spacing:-.01em}
         .bm-logo-txt em{font-style:normal;font-size:.62rem;color:var(--bm-muted);letter-spacing:.04em}
         .bm-nav-desktop{display:none}
         .bm-utils{margin-left:auto;display:flex;align-items:center;gap:.45rem}
         .bm-coins-chip{font-weight:650}
-        .bm-live-pill{text-decoration:none;font-weight:650;color:var(--bm-primary);
+        .bm-live-pill{text-decoration:none;font-weight:650;color:var(--bm-link);
           background:color-mix(in srgb,var(--bm-primary) 10%,transparent);border:1px solid color-mix(in srgb,var(--bm-primary) 24%,transparent)}
         .bm-live-pill:hover{background:color-mix(in srgb,var(--bm-primary) 16%,transparent)}
         .bm-iconbtn{position:relative;display:grid;place-items:center;width:38px;height:38px;border-radius:10px;
@@ -137,7 +137,8 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
           padding:.3rem .3rem calc(.3rem + env(safe-area-inset-bottom))}
         .bm-tab{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:.3rem .55rem;
           color:var(--bm-muted);text-decoration:none;font-size:.66rem;font-weight:550;border-radius:10px;min-width:54px}
-        .bm-tab.active{color:var(--bm-primary)}
+        .bm-tab.active{color:var(--bm-link);font-weight:700}
+        .bm-tab.active .ic{color:var(--bm-primary)}
         .bm-tab .ic{font-size:1.12rem;line-height:1}
 
         @media (max-width: 919px){
@@ -152,7 +153,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
             transition:background .12s ease,color .12s ease}
           .bm-navitem .ic{font-size:.95rem}
           .bm-navitem:hover{background:var(--bm-surface-2);color:var(--bm-ink)}
-          .bm-navitem.active{color:var(--bm-primary);background:color-mix(in srgb, var(--bm-primary) 8%, transparent);font-weight:650}
+          .bm-navitem.active{color:var(--bm-link);background:color-mix(in srgb, var(--bm-primary) 16%, transparent);font-weight:700}
           .bm-main{padding:1.8rem 1.5rem 3rem}
         }
       `}</style>

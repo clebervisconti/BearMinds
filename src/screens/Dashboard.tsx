@@ -124,7 +124,7 @@ export function Dashboard() {
 
             <div className="bm-statgrid">
               <div><div className="v" style={{ color: "var(--bm-success)" }}>{remembered}</div><div className="k">dominados</div></div>
-              <div><div className="v" style={{ color: "var(--bm-primary)" }}>{reviewing}</div><div className="k">em revisão</div></div>
+              <div><div className="v" style={{ color: "var(--bm-link)" }}>{reviewing}</div><div className="k">em revisão</div></div>
               <div><div className="v" style={{ color: "var(--bm-warn)" }}>{reviews.length}</div><div className="k">para hoje</div></div>
             </div>
 

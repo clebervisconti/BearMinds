@@ -33,7 +33,7 @@ export function AdminCoaching() {
         .bm-tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--bm-border);margin-bottom:1rem}
         .bm-tab-btn{padding:.55rem .9rem;border:0;background:none;color:var(--bm-muted);font-weight:600;font-size:.9rem;
           cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-        .bm-tab-btn.active{color:var(--bm-primary);border-bottom-color:var(--bm-primary)}
+        .bm-tab-btn.active{color:var(--bm-link);border-bottom-color:var(--bm-primary)}
       `}</style>
     </AppShell>
   );

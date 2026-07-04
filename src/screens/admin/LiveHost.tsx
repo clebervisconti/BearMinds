@@ -142,7 +142,7 @@ export function LiveHost() {
 
       <style>{`
         .bm-host-lobby{max-width:560px;margin:1rem auto;display:grid;gap:1rem;justify-items:center;text-align:center}
-        .bm-live-badge{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:var(--bm-primary);
+        .bm-live-badge{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:var(--bm-link);
           background:color-mix(in srgb,var(--bm-primary) 12%,transparent);padding:.3rem .7rem;border-radius:999px}
         .bm-pin-display{font-size:4rem;font-weight:900;letter-spacing:.4rem;color:var(--bm-ink);
           background:var(--bm-surface-2);padding:1rem 1.6rem;border-radius:20px;line-height:1}
