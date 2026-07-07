@@ -24,6 +24,8 @@ import certificateRoutes from "./certificates.ts";
 import moderationRoutes from "./moderation.ts";
 import bankRoutes from "./bank.ts";
 import assignmentRoutes from "./assignments.ts";
+import gradesRoutes from "./grades.ts";
+import timelineRoutes from "./timeline.ts";
 
 // Registro central de rotas. Cada spec adiciona seu módulo aqui.
 export function mountRoutes(app: Hono<AppEnv>) {
@@ -59,4 +61,6 @@ export function mountRoutes(app: Hono<AppEnv>) {
   app.route("/", moderationRoutes);
   app.route("/", bankRoutes);
   app.route("/", assignmentRoutes);
+  app.route("/", gradesRoutes);
+  app.route("/", timelineRoutes);
 }

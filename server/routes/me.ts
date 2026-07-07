@@ -14,6 +14,7 @@ import {
 } from "../lib/session.ts";
 import { readJson, badRequest, forbidden, notFound, unprocessable, conflict, type AppEnv } from "../lib/http.ts";
 import { audit } from "../lib/audit.ts";
+import { evaluateAutoEnroll } from "../lib/enrollment.ts";
 import {
   REQUIRED_CONSENTS,
   ALL_CONSENTS,
@@ -223,6 +224,10 @@ app.post("/api/children", requireParent, async (c) => {
 
   setActiveChild(c.get("sessionId"), childId);
   audit(`parent:${parentId}`, "child_create", `child:${childId}`, { age_band });
+  
+  // auto-enroll rules evaluation
+  evaluateAutoEnroll(childId, body.institution_id ?? null, body.grade, body.class_id ?? null);
+
   return c.json(buildMe(parentId, childId), 201);
 });
 
@@ -289,6 +294,10 @@ app.post("/api/me/self-profile", requireParent, async (c) => {
 
   setActiveChild(c.get("sessionId"), childId);
   audit(`parent:${parentId}`, "self_profile_create", `child:${childId}`, { age_band });
+
+  // auto-enroll rules evaluation
+  evaluateAutoEnroll(childId, body.institution_id ?? null, body.grade, body.class_id ?? null);
+
   return c.json(buildMe(parentId, childId), 201);
 });
 

@@ -6,6 +6,7 @@ import { db, newId, nowIso } from "../db.ts";
 import { env } from "../env.ts";
 import {
   requireParent, requireRole, csrfGuard, parentRole, createSession, setSessionCookie,
+  staffInstitutionOrThrow,
 } from "../lib/session.ts";
 import { readJson, badRequest, forbidden, notFound, conflict, type AppEnv } from "../lib/http.ts";
 import { hashPassword } from "../lib/crypto.ts";
@@ -211,6 +212,259 @@ app.post("/api/admin/ai-model", requireParent, requireRole("platform_admin"), as
   setSetting("ai_model", model);
   audit(`parent:${c.get("parentId")}`, "set_ai_model", model);
   return c.json({ ok: true, current: model });
+});
+
+// ---------- Auto-matrícula Rules (spec 16.1) ----------
+const enrollmentRuleSchema = z.object({
+  grade: z.string().max(30).nullish(),
+  class_id: z.string().max(60).nullish(),
+});
+
+app.post("/api/admin/courses/:id/enrollment-rules", requireParent, requireRole("institution_admin"), async (c) => {
+  const courseId = c.req.param("id");
+  const parentId = c.get("parentId");
+  const body = await readJson(c, enrollmentRuleSchema);
+
+  const course = db.prepare("SELECT institution_id FROM courses WHERE id = ?").get(courseId) as { institution_id: string } | undefined;
+  if (!course) throw notFound("course_not_found", "Curso não encontrado.");
+
+  staffInstitutionOrThrow(parentId, course.institution_id);
+
+  const id = newId();
+  db.prepare(
+    `INSERT INTO enrollment_rules (id, course_id, institution_id, grade, class_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(id, courseId, course.institution_id, body.grade ?? null, body.class_id ?? null, nowIso());
+
+  audit(`parent:${parentId}`, "enrollment_rule_create", `rule:${id}`, { course_id: courseId, grade: body.grade, class_id: body.class_id });
+
+  return c.json({ id }, 201);
+});
+
+app.get("/api/admin/courses/:id/enrollment-rules", requireParent, requireRole("professor", "tutor", "institution_admin"), (c) => {
+  const courseId = c.req.param("id");
+  const parentId = c.get("parentId");
+
+  const course = db.prepare("SELECT institution_id FROM courses WHERE id = ?").get(courseId) as { institution_id: string } | undefined;
+  if (!course) throw notFound("course_not_found", "Curso não encontrado.");
+
+  staffInstitutionOrThrow(parentId, course.institution_id);
+
+  const rules = db.prepare(
+    "SELECT id, grade, class_id, created_at FROM enrollment_rules WHERE course_id = ? ORDER BY created_at DESC"
+  ).all(courseId) as Record<string, unknown>[];
+
+  return c.json({ rules });
+});
+
+app.delete("/api/admin/enrollment-rules/:ruleId", requireParent, requireRole("institution_admin"), (c) => {
+  const ruleId = c.req.param("ruleId");
+  const parentId = c.get("parentId");
+
+  const rule = db.prepare("SELECT id, course_id, institution_id FROM enrollment_rules WHERE id = ?").get(ruleId) as { id: string; course_id: string; institution_id: string } | undefined;
+  if (!rule) throw notFound("rule_not_found", "Regra não encontrada.");
+
+  staffInstitutionOrThrow(parentId, rule.institution_id);
+
+  db.prepare("DELETE FROM enrollment_rules WHERE id = ?").run(ruleId);
+  audit(`parent:${parentId}`, "enrollment_rule_delete", `rule:${ruleId}`, { course_id: rule.course_id });
+
+  return c.json({ ok: true });
+});
+
+// ---------- Duplicação de Curso (spec 16.2) ----------
+const duplicateCourseSchema = z.object({
+  title: z.string().min(2).max(100),
+  class_id: z.string().min(1).max(60),
+});
+
+app.post("/api/admin/courses/:id/duplicate", requireParent, requireRole("professor", "tutor", "institution_admin"), async (c) => {
+  const courseId = c.req.param("id");
+  const parentId = c.get("parentId");
+  const body = await readJson(c, duplicateCourseSchema);
+
+  interface CourseRow {
+    id: string; institution_id: string; subject_id: string; class_id: string;
+    title: string; cover_emoji: string; status: string; created_by: string; created_at: string;
+  }
+  const course = db.prepare("SELECT * FROM courses WHERE id = ?").get(courseId) as CourseRow | undefined;
+  if (!course) throw notFound("course_not_found", "Curso de origem não encontrado.");
+
+  staffInstitutionOrThrow(parentId, course.institution_id);
+
+  const newCourseId = newId();
+
+  db.transaction(() => {
+    // 1) Clona a linha do curso com status draft
+    db.prepare(
+      `INSERT INTO courses (id, institution_id, subject_id, class_id, title, cover_emoji, status, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, ?)`
+    ).run(
+      newCourseId,
+      course.institution_id,
+      course.subject_id,
+      body.class_id,
+      body.title,
+      course.cover_emoji,
+      parentId,
+      nowIso()
+    );
+
+    // 2) Clona os módulos
+    interface ModuleRow { id: string; title: string; objectives: string | null; display_order: number; availability_json: string | null; }
+    const modules = db.prepare("SELECT id, title, objectives, display_order, availability_json FROM course_modules WHERE course_id = ?").all(courseId) as ModuleRow[];
+
+    const checkItems = db.prepare(
+      `SELECT id, module_id, kind, title, payload_json, source_file_id, display_order, duration_min, status, availability_json, verified_by, verified_at, created_at 
+       FROM content_items WHERE module_id = ?`
+    );
+
+    const insertModule = db.prepare(
+      `INSERT INTO course_modules (id, course_id, title, objectives, display_order, availability_json)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+
+    const insertItem = db.prepare(
+      `INSERT INTO content_items (id, module_id, kind, title, payload_json, source_file_id, display_order, duration_min, status, availability_json, verified_by, verified_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)`
+    );
+
+    for (const mod of modules) {
+      const newModuleId = newId();
+      insertModule.run(
+        newModuleId,
+        newCourseId,
+        mod.title,
+        mod.objectives,
+        mod.display_order,
+        mod.availability_json
+      );
+
+      // 3) Clona os content items do módulo
+      interface ItemRow {
+        id: string; module_id: string; kind: string; title: string; payload_json: string | null;
+        source_file_id: string | null; display_order: number; duration_min: number | null;
+        status: string; availability_json: string | null; verified_by: string | null;
+        verified_at: string | null; created_at: string;
+      }
+      const items = checkItems.all(mod.id) as ItemRow[];
+      for (const item of items) {
+        insertItem.run(
+          newId(),
+          newModuleId,
+          item.kind,
+          item.title,
+          item.payload_json,
+          item.source_file_id,
+          item.display_order,
+          item.duration_min,
+          item.availability_json,
+          item.verified_by,
+          item.verified_at,
+          nowIso()
+        );
+      }
+    }
+  })();
+
+  audit(`parent:${parentId}`, "course_duplicate", `course:${courseId}`, { new_course_id: newCourseId });
+
+  return c.json({ id: newCourseId }, 201);
+});
+
+// ---------- Relatórios por Curso (spec 16.5) ----------
+app.get("/api/admin/courses/:id/reports", requireParent, requireRole("professor", "tutor", "institution_admin"), (c) => {
+  const courseId = c.req.param("id");
+  const parentId = c.get("parentId");
+
+  const course = db.prepare("SELECT institution_id FROM courses WHERE id = ?").get(courseId) as { institution_id: string } | undefined;
+  if (!course) throw notFound("course_not_found", "Curso não encontrado.");
+
+  staffInstitutionOrThrow(parentId, course.institution_id);
+
+  // 1) Participação: alunos ativos (eventos com actor_kind = child) nos últimos 7 dias
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const activeStudents = (db.prepare(
+    `SELECT COUNT(DISTINCT actor_id) AS n FROM events 
+     WHERE course_id = ? AND actor_kind = 'child' AND created_at >= ?`
+  ).get(courseId, sevenDaysAgo) as { n: number }).n;
+
+  const totalStudents = (db.prepare(
+    "SELECT COUNT(*) AS total FROM enrollments WHERE course_id = ?"
+  ).get(courseId) as { total: number }).total;
+
+  const participationRate = totalStudents > 0 ? activeStudents / totalStudents : 0;
+
+  // 2) Conclusão média: percentual médio de conclusão de itens do curso por aluno matriculado
+  // Total de itens publicados no curso
+  const totalItems = (db.prepare(
+    `SELECT COUNT(*) AS n FROM content_items i 
+     JOIN course_modules m ON m.id = i.module_id 
+     WHERE m.course_id = ? AND i.status = 'published'`
+  ).get(courseId) as { n: number }).n;
+
+  let averageCompletion = 0;
+  if (totalStudents > 0 && totalItems > 0) {
+    const completedItems = (db.prepare(
+      `SELECT COUNT(*) AS n FROM item_progress ip 
+       JOIN content_items i ON i.id = ip.item_id 
+       JOIN course_modules m ON m.id = i.module_id 
+       WHERE m.course_id = ? AND ip.status = 'done' 
+         AND ip.child_id IN (SELECT child_id FROM enrollments WHERE course_id = ?)`
+    ).get(courseId, courseId) as { n: number }).n;
+
+    averageCompletion = completedItems / (totalItems * totalStudents);
+  }
+
+  // 3) Desempenho médio (Provas + Tarefas):
+  // Média de nota de provas (melhor tentativa por aluno/prova)
+  const avgExams = (db.prepare(
+    `SELECT AVG(best_score) AS n FROM (
+       SELECT MAX(ea.score) AS best_score 
+       FROM exam_attempts ea 
+       JOIN exams e ON e.id = ea.exam_id 
+       WHERE e.course_id = ? AND ea.submitted_at IS NOT NULL 
+       GROUP BY ea.child_id, ea.exam_id
+     )`
+  ).get(courseId) as { n: number | null }).n ?? 0;
+
+  // Média de nota de tarefas (melhor review de submissão por aluno/tarefa)
+  const subRows = db.prepare(
+    `SELECT sub.child_id, sub.item_id, MAX(rev.points) AS points, item.payload_json 
+     FROM submission_reviews rev 
+     JOIN submissions sub ON sub.id = rev.submission_id 
+     JOIN content_items item ON item.id = sub.item_id 
+     JOIN course_modules m ON m.id = item.module_id 
+     WHERE m.course_id = ? 
+     GROUP BY sub.child_id, sub.item_id`
+  ).all(courseId) as { child_id: string; item_id: string; points: number; payload_json: string }[];
+
+  let totalPointsNormalized = 0;
+  let totalTasksEvaluated = 0;
+
+  for (const row of subRows) {
+    try {
+      const payload = JSON.parse(row.payload_json || "{}");
+      const maxPoints = Number(payload.max_points || 100);
+      if (maxPoints > 0) {
+        totalPointsNormalized += (row.points / maxPoints);
+        totalTasksEvaluated++;
+      }
+    } catch {
+      // payload_json inválido
+    }
+  }
+
+  const avgAssignments = totalTasksEvaluated > 0 ? totalPointsNormalized / totalTasksEvaluated : 0;
+
+  return c.json({
+    active_students_7d: activeStudents,
+    total_students: totalStudents,
+    participation_rate: participationRate,
+    average_completion: averageCompletion,
+    average_exam_score: avgExams,
+    average_assignment_score: avgAssignments,
+  });
 });
 
 export default app;

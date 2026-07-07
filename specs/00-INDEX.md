@@ -28,6 +28,7 @@
 | 09 | [09-lgpd-security.md](09-lgpd-security.md) | LGPD compliance checklist, security hardening, data deletion | P1 (gate) |
 | 10 | [10-deployment.md](10-deployment.md) | Envs, build, VPS deploy (OLS + systemd + Cloudflare), rollback | P1 |
 | 11 | [11-roadmap.md](11-roadmap.md) | Phases P1/P2/P3, acceptance metrics, kill criteria, launch checklist | all |
+| 16 | [16-gestao-automacao.md](16-gestao-automacao.md) | Specifications for P5b (Auto-matrícula, Duplicação, Boletim, Cronograma, Relatórios) | P5b |
 
 ## Current state → target state (one screen)
 

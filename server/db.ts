@@ -639,10 +639,21 @@ CREATE INDEX IF NOT EXISTS idx_attempts_exam ON exam_attempts(exam_id, child_id)
 CREATE INDEX IF NOT EXISTS idx_subs_item ON submissions(item_id);
 CREATE INDEX IF NOT EXISTS idx_subs_child ON submissions(child_id);
 CREATE INDEX IF NOT EXISTS idx_subrev_sub ON submission_reviews(submission_id);
+
+-- ===== AUTO-MATRÍCULA RULES (spec 16) =====
+CREATE TABLE IF NOT EXISTS enrollment_rules (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE CASCADE,
+  grade TEXT,
+  class_id TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_enrules_lookup ON enrollment_rules(institution_id, grade, class_id);
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 let initialized = false;
 
 function ensureColumns(table: string, defs: Record<string, string>): void {
