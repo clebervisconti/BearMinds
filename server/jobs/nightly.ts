@@ -107,6 +107,14 @@ export function runNightly(now = new Date()): void {
   computeDailyMetrics(new Date(now.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10));
   const cohorts = computeCohorts(now);
   const prunedEvents = pruneEvents(365);   // retenção do events stream (spec 15.1)
+  
+  // Otimização do banco de dados (SQLite PRAGMA optimize)
+  try {
+    db.exec("PRAGMA optimize;");
+  } catch (e) {
+    logger.error({ err: String(e) }, "erro ao rodar PRAGMA optimize");
+  }
+
   logger.info({ del, cohorts, prunedEvents }, "nightly job concluído");
 }
 

@@ -29,7 +29,10 @@ export interface Stmt {
 const raw = new DatabaseSync(env.databasePath);
 raw.exec("PRAGMA journal_mode = WAL");
 raw.exec("PRAGMA foreign_keys = ON");
-raw.exec("PRAGMA busy_timeout = 5000");
+raw.exec("PRAGMA busy_timeout = 10000");
+raw.exec("PRAGMA synchronous = NORMAL");
+raw.exec("PRAGMA temp_store = MEMORY");
+raw.exec("PRAGMA cache_size = -10000");
 
 let txDepth = 0;
 

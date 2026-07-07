@@ -61,11 +61,17 @@ export const requireParent: MiddlewareHandler<AppEnv> = async (c, next) => {
   const id = getCookie(c, COOKIE);
   const session = id ? loadSession(id) : null;
   if (!session) throw unauthorized();
-  // sliding expiry
-  db.prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").run(
-    new Date(Date.now() + TTL_MS).toISOString(),
-    session.id,
-  );
+  
+  // sliding expiry (throttle to reduce SQLite writes: only update if less than 29 days remaining)
+  const expiresTime = new Date(session.expires_at).getTime();
+  const threshold = Date.now() + TTL_MS - 24 * 60 * 60 * 1000; // 29 dias restantes
+  if (expiresTime < threshold) {
+    db.prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").run(
+      new Date(Date.now() + TTL_MS).toISOString(),
+      session.id,
+    );
+  }
+  
   c.set("sessionId", session.id);
   c.set("parentId", session.parent_id);
   c.set("activeChildId", session.active_child_id);
