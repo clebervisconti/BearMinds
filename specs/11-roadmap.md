@@ -28,15 +28,13 @@ Live games estilo Kahoot (PIN, tempo, pódio; polling) · enquetes + Q&A com upv
 curso + DM estudante↔staff) · dashboard de tutoria (alunos em risco + anotações) · certificados na conclusão
 (+ verificação pública) · dashboard de moderação (fila de denúncias).
 
-## Resta (futuro, gated por métricas)
-
 > **P5 re-planejado em 2026-07-04** a partir da análise de gap **Moodle + MindTickle** (o que roubar, o que
 > evitar — detalhes no CHANGELOG). O que JÁ superamos e não reconstruímos: FSRS por atom (mais fino que o
 > reforço adaptativo por tópico do MindTickle), autoria IA grounded com sign-off humano, conclusão
 > mastery-gated, live games/enquetes/Q&A, chat com DM só aluno↔staff, coaching em risco, certificados
 > verificáveis, LGPD parent-fronted.
 
-### P5a — Assessment core (spec 15) — PRÓXIMA WAVE
+### P5a — Assessment core (spec 15) ✅ 2026-07-04
 1. **Events stream** (Moodle): tabela de eventos estruturados alimentando todos os relatórios futuros.
 2. **Banco de questões** (Moodle, a joia): desacoplado do quiz, BNCC+tags, versionado; **IA preenche
    (pipeline enrich), professor cura/aprova**; pools = filtro + sorteio.
@@ -50,31 +48,32 @@ curso + DM estudante↔staff) · dashboard de tutoria (alunos em risco + anotaç
    individual público); 11+ = leaderboard da instituição como está. Decisão do owner 2026-07-04.
 - Migração v5 aditiva. Guardrails (05) e LGPD (09) inalterados.
 
-### P5b — Gestão & automação (spec 16, a escrever)
+### P5b — Gestão & automação (spec 16) ✅ 2026-07-09
 1. **Regras de auto-matrícula** (MindTickle): predicados sobre perfil ("série=7EF E escola=X → série Y") —
    política uma vez, zero matrícula manual.
-2. **Duplicação de curso / rollover de período** (Moodle, o recurso mais usado por professores) +
-   importar itens entre cursos.
-3. **Gradebook-lite**: categorias/pesos, UMA agregação padrão com prévia ao vivo (anti-complaint Moodle),
-   visão professor + aluno + responsável, export CSV.
+2. **Duplicação de curso / rollover de período** (Moodle, o recurso mais usado por professores).
+3. **Gradebook-lite**: UMA agregação padrão (média aritmética) com prévia na tela, visão
+   professor + aluno + responsável.
 4. **Calendário/Timeline** (Moodle, o recurso mais usado por alunos): prazos derivados automaticamente dos
    itens (due de tarefas/provas), bloco "o que vence em seguida" no Dashboard.
-5. **Relatórios por curso** (consumidores do events stream): participação, conclusão, % acerto por questão.
+5. **Relatórios por curso** (consumidores do events stream): participação, conclusão, médias.
 6. **Grupos dentro do curso** (turmas paralelas com um só conteúdo).
+- Importar itens entre cursos e export CSV do boletim **ficaram fora** desta wave (não implementados) —
+  candidatos a um polish futuro, não bloqueiam nada em produção.
 
-### P5c — Engajamento & prática (spec 17, a escrever)
+### P5c — Engajamento & prática (spec 17) ✅ 2026-07-09
 1. **Quick Updates + Checklists** (MindTickle): micro-lição de 3 min com 1-2 perguntas; listas de passos
    rastreáveis — o push diário que não é um curso.
 2. **Exemplares de pares** (MindTickle, a melhor mecânica social): professor promove as melhores
-   submissões a conteúdo de estudo (moderação obrigatória, consentimento).
+   submissões a conteúdo de estudo (moderação obrigatória, consentimento do responsável).
 3. **Auto-avaliação vs avaliação do professor** (metacognição — ouro pedagógico para teens): gap view.
-4. **Readiness 2.0** (MindTickle Readiness Index → BNCC): prontidão = rollup ponderado de evidências
-   heterogêneas por competência — conhecimento (FSRS) + habilidade (rubricas) + execução (provas);
-   dashboard professor/responsável.
-5. **Missions-lite** (MindTickle, assinatura deles traduzida p/ escola): gravar áudio/vídeo "explique o
-   conceito", **fluência de leitura (6-10)**, prática de idiomas; IA transcreve + pré-analisa (ritmo,
-   palavras-chave), professor avalia por rubrica. **Escopo LGPD dedicado** (decisão do owner 2026-07-04):
-   consentimento próprio de mídia, nunca pública, revisão só professor, retenção limitada. Construir por último.
+4. **Readiness 2.0** (MindTickle Readiness Index → BNCC): prontidão = rollup ponderado 40/30/30 —
+   conhecimento (FSRS) + habilidade (rubricas) + execução (provas); dashboard professor/responsável.
+5. **Missions-lite**: gravar áudio/vídeo "explique o conceito"/fluência de leitura/idiomas; **IA pré-analisa
+   uma transcrição digitada pelo aluno** (este produto não tem ASR/transcrição automática de fala
+   configurada — limitação honesta, documentada no spec 17), professor avalia por rubrica ouvindo/assistindo
+   o arquivo. Escopo LGPD dedicado: consentimento próprio de mídia (`media_recording`), nunca pública,
+   revisão só professor, retenção limitada (poda automática no nightly).
 - IA nos 3 pontos de alavanca em todas as waves (autoria/praticante/revisor) — sempre grounded + sign-off.
 
 ### Fixes transversais (lições dos reviews Moodle/MindTickle — aplicar em toda tela nova)
@@ -82,17 +81,33 @@ curso + DM estudante↔staff) · dashboard de tutoria (alunos em risco + anotaç
 - UMA agregação de notas padrão com prévia ao vivo. UI kit único entre tipos de atividade.
 - Conteúdo bloqueado = visível com 🔒 + motivo (não oculto). Sem lockdown browser (teatro de segurança).
 
-### P5-r — retenção & pagamento (inalterado, gated by metrics, corre em paralelo às waves)
-- Founding-member paywall (Pix/Stripe link manual), anual-prepago preferido.
-- Correlação pós-prova (predito × real) — *acelerada pelo P5a item 3* · digests por e-mail.
-- Corpus: completar Matemática 6º–9º; adicionar Português OU Ciências (por demanda de coorte).
-- Biblioteca de exploráveis (alvo: 1 por 3 skills) · otimização FSRS per-child.
-- App nativo (Expo) SÓ se retenção por push provar-se necessária.
+## Resta (futuro, gated por métricas)
 
-### P6 — escala & infra (months 4–12, gated by D90)
-- **WebSockets** (substitui o polling dos live games/chat) quando a escala exigir.
-- **Vídeo self-hosted / HLS / CDN** (hoje: embeds YouTube/Vimeo + upload ≤200MB — decisão do owner).
-- Projetos PBL/metaprojetos completos (Inteli) · Ensino Médio (ENEM) · piloto B2B lighthouse.
+### P5-r — retenção & pagamento (parcial, gated by metrics — ver launch metrics abaixo)
+- ✅ **Founding-member paywall — link MANUAL** (2026-07-09): sem gateway de pagamento integrado (nenhuma
+  credencial Stripe/Pix configurada nesta base). O owner cola um link de pagamento avulso + preço em
+  Administração; após confirmar o pagamento FORA do sistema, marca o e-mail do responsável como founding
+  member. Isso NÃO é checkout automatizado — é o "manual" que o roadmap sempre previu, não um MVP incompleto
+  de algo maior.
+- ✅ **Correlação pós-prova (predito × real)** (2026-07-09): dashboard por curso comparando a prontidão FSRS
+  atual com a nota real de prova (Pearson). **Limitação de MVP documentada**: usa o estado FSRS ATUAL do
+  aluno (não há snapshot histórico do estado no momento exato da prova) — é um diagnóstico agregado, não um
+  replay exato do passado.
+- ⏳ **Não construído** (fora do alcance de uma sessão de código — dependem de dados reais, credenciais
+  externas ou decisão de negócio do owner, não de mais código): digests por e-mail (nenhum provedor SMTP
+  configurado em `.env`); completar corpus Matemática 6º–9º + Português/Ciências (autoria de conteúdo, não
+  código); biblioteca de exploráveis; otimização FSRS per-child (precisa de dados reais de uso —
+  os parâmetros atuais são fixos e não há coorte para calibrar); app nativo Expo (gated "só se necessário").
+
+### P6 — escala & infra (months 4–12, gated by D90 — **gate não atingido, nenhum usuário real ainda**)
+Todo o P6 é explicitamente gated pela métrica D90 da tabela abaixo, que não existe neste ambiente de
+desenvolvimento (zero usuários reais/pagantes). Nenhum item foi construído nesta sessão — construir sem o
+gate contradiria a própria disciplina de "kill criteria" deste roadmap:
+- **WebSockets** (substitui o polling dos live games/chat) quando a escala exigir — o polling atual (P4b/c)
+  está testado e em produção; migrar sem pressão real de escala é risco de regressão sem benefício mensurável.
+- **Vídeo self-hosted / HLS / CDN** (hoje: embeds YouTube/Vimeo + upload ≤200MB) — decisão de custo/infra do owner.
+- Projetos PBL/metaprojetos completos (Inteli) · Ensino Médio (ENEM) · piloto B2B lighthouse — conteúdo/vendas,
+  não engenharia.
 
 ## Launch metrics (medir desde o dia 1 via 09 §9.3)
 | Gate | Metric | PASS | PIVOT | KILL |

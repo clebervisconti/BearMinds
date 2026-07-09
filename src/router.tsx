@@ -26,6 +26,7 @@ import { AdminModeracao } from "./screens/admin/AdminModeracao";
 import { AdminAvaliacao } from "./screens/admin/AdminAvaliacao";
 import { AdminGestao } from "./screens/admin/AdminGestao";
 import { AdminEntregas } from "./screens/admin/AdminEntregas";
+import { AdminMissoes } from "./screens/admin/AdminMissoes";
 import { LiveHost } from "./screens/admin/LiveHost";
 import { Convite } from "./screens/admin/Convite";
 import { PoliticaPrivacidade, Termos } from "./screens/Legal";
@@ -86,6 +87,7 @@ export function AppRouter() {
       <Route path="/admin/curso/:id/avaliacao" element={<Staff><AdminAvaliacao /></Staff>} />
       <Route path="/admin/curso/:id/gestao" element={<Staff><AdminGestao /></Staff>} />
       <Route path="/admin/curso/:courseId/item/:itemId/entregas" element={<Staff><AdminEntregas /></Staff>} />
+      <Route path="/admin/curso/:courseId/item/:itemId/missoes" element={<Staff><AdminMissoes /></Staff>} />
       <Route path="/admin/live/:itemId" element={<Staff><LiveHost /></Staff>} />
       <Route path="/admin/pessoas" element={<Staff><AdminPessoas /></Staff>} />
       <Route path="/admin/coaching" element={<Staff><AdminCoaching /></Staff>} />

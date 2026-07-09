@@ -8,13 +8,17 @@ import { useMe } from "../../lib/queries";
 import {
   api, ApiError,
   type AdminCourseDetail, type Gradebook, type CourseReports, type EnrollmentRule,
+  type CourseGroup, type StudentReadiness, type SelfAssessGapRow,
 } from "../../lib/api";
 
-type Tab = "boletim" | "relatorios" | "regras" | "duplicar";
+type Tab = "boletim" | "relatorios" | "regras" | "duplicar" | "grupos" | "readiness" | "gap";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "boletim", label: "Boletim", icon: "📊" },
   { id: "relatorios", label: "Relatórios", icon: "📈" },
+  { id: "readiness", label: "Readiness", icon: "🎯" },
+  { id: "gap", label: "Autoavaliação", icon: "🪞" },
+  { id: "grupos", label: "Grupos", icon: "👥" },
   { id: "regras", label: "Auto-matrícula", icon: "⚙️" },
   { id: "duplicar", label: "Duplicar", icon: "📑" },
 ];
@@ -60,6 +64,9 @@ export function AdminGestao() {
 
           {tab === "boletim" && <BoletimTab courseId={id} />}
           {tab === "relatorios" && <RelatoriosTab courseId={id} />}
+          {tab === "readiness" && <ReadinessTab courseId={id} />}
+          {tab === "gap" && <GapTab courseId={id} />}
+          {tab === "grupos" && <GruposTab courseId={id} />}
           {tab === "regras" && <RegrasTab courseId={id} />}
           {tab === "duplicar" && <DuplicarTab courseId={id} defaultClass={course.class_id} />}
         </>
@@ -131,12 +138,14 @@ function gradeColor(avg: number | null): string {
   return "var(--bm-danger)";
 }
 
-// ---------- Relatórios (spec 16.5) ----------
+// ---------- Relatórios (spec 16.5) + correlação pós-prova (P5-r) ----------
 function RelatoriosTab({ courseId }: { courseId: string }) {
   const [data, setData] = useState<CourseReports | null>(null);
+  const [corr, setCorr] = useState<Awaited<ReturnType<typeof api.predictionCorrelation>> | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     api.adminCourseReports(courseId).then(setData).catch((e) => setErr(e instanceof ApiError ? e.message : "Erro."));
+    api.predictionCorrelation(courseId).then(setCorr).catch(() => setCorr(null));
   }, [courseId]);
   if (err) return <ErrorNote>{err}</ErrorNote>;
   if (!data) return <BearLoader label="Carregando relatórios…" />;
@@ -148,14 +157,161 @@ function RelatoriosTab({ courseId }: { courseId: string }) {
     { label: "Média em tarefas", value: pct(data.average_assignment_score), hint: "nota da rubrica" },
   ];
   return (
-    <div style={{ display: "grid", gap: ".8rem", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
-      {cards.map((c) => (
-        <div key={c.label} className="bm-card-flat" style={{ padding: "1rem 1.1rem" }}>
-          <div className="bm-eyebrow" style={{ marginBottom: ".4rem" }}>{c.label}</div>
-          <div style={{ fontSize: "1.9rem", fontWeight: 700, letterSpacing: "-.02em" }}>{c.value}</div>
-          <div className="bm-meta" style={{ marginTop: ".2rem" }}>{c.hint}</div>
+    <div style={{ display: "grid", gap: "1rem" }}>
+      <div style={{ display: "grid", gap: ".8rem", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
+        {cards.map((c) => (
+          <div key={c.label} className="bm-card-flat" style={{ padding: "1rem 1.1rem" }}>
+            <div className="bm-eyebrow" style={{ marginBottom: ".4rem" }}>{c.label}</div>
+            <div style={{ fontSize: "1.9rem", fontWeight: 700, letterSpacing: "-.02em" }}>{c.value}</div>
+            <div className="bm-meta" style={{ marginTop: ".2rem" }}>{c.hint}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bm-card" style={{ display: "grid", gap: ".5rem" }}>
+        <div className="bm-eyebrow">Correlação pós-prova: prontidão prevista × nota real</div>
+        {!corr || corr.n === 0 ? (
+          <div className="bm-meta">Sem provas com tentativas suficientes ainda para calcular a correlação.</div>
+        ) : (
+          <>
+            <div style={{ fontSize: "1.6rem", fontWeight: 700 }}>
+              {corr.correlation === null ? "—" : corr.correlation.toFixed(2)}
+              <span className="bm-meta" style={{ fontWeight: 400, fontSize: ".8rem", marginLeft: ".5rem" }}>
+                (Pearson, {corr.n} tentativa{corr.n === 1 ? "" : "s"})
+              </span>
+            </div>
+            <div className="bm-meta">{corr.note}</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Readiness 2.0 (spec 17.4) ----------
+function ReadinessTab({ courseId }: { courseId: string }) {
+  const [data, setData] = useState<{ students: StudentReadiness[]; course_average: number | null } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    api.courseReadiness(courseId).then(setData).catch((e) => setErr(e instanceof ApiError ? e.message : "Erro."));
+  }, [courseId]);
+  if (err) return <ErrorNote>{err}</ErrorNote>;
+  if (!data) return <BearLoader label="Carregando readiness…" />;
+  if (data.students.length === 0) return <div className="bm-card"><div className="bm-meta">Nenhum aluno matriculado ainda.</div></div>;
+
+  return (
+    <div style={{ display: "grid", gap: ".8rem" }}>
+      <div className="bm-card-flat" style={{ padding: ".8rem 1rem", fontSize: ".85rem", color: "var(--bm-muted)" }}>
+        Prontidão = rollup ponderado de <b>conhecimento</b> (FSRS, 40%), <b>habilidade</b> (rubricas de tarefas, 30%) e
+        <b> execução</b> (notas de provas, 30%). Dimensões sem dado redistribuem o peso entre as demais.
+        {data.course_average !== null && <> Média da turma: <b>{pct(data.course_average)}</b>.</>}
+      </div>
+      <div style={{ display: "grid", gap: ".5rem" }}>
+        {data.students.map((s) => (
+          <div key={s.id} className="bm-row">
+            <span className="thumb" style={{ background: `color-mix(in srgb, ${gradeColor(s.overall)} 12%, transparent)` }}>🎯</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 620 }}>{s.display_name}</div>
+              <div className="bm-meta">conhecimento {pct(s.knowledge)} · habilidade {pct(s.skill)} · execução {pct(s.execution)}</div>
+            </div>
+            <span style={{ fontWeight: 700, fontSize: "1.1rem", color: gradeColor(s.overall) }}>{pct(s.overall)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Autoavaliação vs professor (spec 17.3) ----------
+function GapTab({ courseId }: { courseId: string }) {
+  const [data, setData] = useState<{ submissions: SelfAssessGapRow[]; average_gap: number | null; pending_teacher_review: number } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    api.selfAssessmentGap(courseId).then(setData).catch((e) => setErr(e instanceof ApiError ? e.message : "Erro."));
+  }, [courseId]);
+  if (err) return <ErrorNote>{err}</ErrorNote>;
+  if (!data) return <BearLoader label="Carregando…" />;
+  if (data.submissions.length === 0) return <div className="bm-card"><div className="bm-meta">Nenhuma autoavaliação com nota do professor ainda para comparar.</div></div>;
+
+  return (
+    <div style={{ display: "grid", gap: ".8rem" }}>
+      <div className="bm-card-flat" style={{ padding: ".8rem 1rem", fontSize: ".85rem", color: "var(--bm-muted)" }}>
+        Gap = autoavaliação − nota do professor. Positivo = aluno superestimou; negativo = subestimou.
+        {data.average_gap !== null && <> Gap médio da turma: <b>{data.average_gap >= 0 ? "+" : ""}{Math.round(data.average_gap * 100)}pp</b>.</>}
+        {data.pending_teacher_review > 0 && <> {data.pending_teacher_review} autoavaliação(ões) aguardando a nota do professor.</>}
+      </div>
+      <div style={{ display: "grid", gap: ".5rem" }}>
+        {data.submissions.map((r) => (
+          <div key={r.submission_id} className="bm-row">
+            <span className="thumb" style={{ background: "color-mix(in srgb, var(--bm-primary) 10%, transparent)" }}>🪞</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 620 }}>{r.student}</div>
+              <div className="bm-meta">{r.item_title} · aluno {pct(r.self_fraction)} vs professor {pct(r.teacher_fraction)}</div>
+            </div>
+            <span style={{ fontWeight: 700, color: Math.abs(r.gap) > 0.2 ? "var(--bm-warn)" : "var(--bm-success)" }}>
+              {r.gap >= 0 ? "+" : ""}{Math.round(r.gap * 100)}pp
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Grupos dentro do curso (spec 16.6) ----------
+function GruposTab({ courseId }: { courseId: string }) {
+  const [data, setData] = useState<{ groups: CourseGroup[]; unassigned: number } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    api.courseGroups(courseId).then(setData).catch((e) => setErr(e instanceof ApiError ? e.message : "Erro."));
+  }, [courseId]);
+  useEffect(() => { load(); }, [load]);
+
+  async function create() {
+    setBusy(true); setErr(null);
+    try { await api.createCourseGroup(courseId, title.trim()); setTitle(""); load(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Erro ao criar grupo."); }
+    finally { setBusy(false); }
+  }
+  async function remove(id: string) {
+    if (!confirm("Excluir este grupo? Os alunos permanecem matriculados no curso.")) return;
+    try { await api.deleteCourseGroup(id); load(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Erro."); }
+  }
+
+  return (
+    <div style={{ display: "grid", gap: "1rem" }}>
+      <div className="bm-card-flat" style={{ padding: ".8rem 1rem", fontSize: ".88rem", color: "var(--bm-muted)" }}>
+        Turmas paralelas compartilhando o mesmo conteúdo — útil para separar leaderboard, boletim e relatórios por turma dentro de um só curso.
+      </div>
+      {err && <ErrorNote>{err}</ErrorNote>}
+      <div className="bm-card" style={{ display: "flex", gap: ".6rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+        <label style={{ display: "grid", gap: ".2rem" }}>
+          <span className="bm-meta">Nome do grupo</span>
+          <input className="bm-input" placeholder="ex.: Turma A" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} style={{ width: 220 }} />
+        </label>
+        <button className="bm-btn bm-btn-sm" disabled={busy || title.trim().length < 2} onClick={create}>+ Criar grupo</button>
+      </div>
+      {!data ? <BearLoader label="Carregando grupos…" /> : data.groups.length === 0 ? (
+        <div className="bm-card"><div className="bm-meta">Nenhum grupo ainda. Todos os {data.unassigned} aluno(s) matriculado(s) aparecem sem grupo.</div></div>
+      ) : (
+        <div style={{ display: "grid", gap: ".5rem" }}>
+          {data.groups.map((g) => (
+            <div key={g.id} className="bm-row">
+              <span className="thumb" style={{ background: "color-mix(in srgb, var(--bm-primary) 10%, transparent)" }}>👥</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 620 }}>{g.title}</div>
+                <div className="bm-meta">{g.members} aluno(s)</div>
+              </div>
+              <button className="bm-btn-quiet bm-btn-sm" onClick={() => remove(g.id)} aria-label="Excluir">🗑</button>
+            </div>
+          ))}
+          {data.unassigned > 0 && <div className="bm-meta">{data.unassigned} aluno(s) matriculado(s) ainda sem grupo.</div>}
         </div>
-      ))}
+      )}
     </div>
   );
 }

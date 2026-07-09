@@ -28,7 +28,12 @@
 | 09 | [09-lgpd-security.md](09-lgpd-security.md) | LGPD compliance checklist, security hardening, data deletion | P1 (gate) |
 | 10 | [10-deployment.md](10-deployment.md) | Envs, build, VPS deploy (OLS + systemd + Cloudflare), rollback | P1 |
 | 11 | [11-roadmap.md](11-roadmap.md) | Phases P1/P2/P3, acceptance metrics, kill criteria, launch checklist | all |
-| 16 | [16-gestao-automacao.md](16-gestao-automacao.md) | Specifications for P5b (Auto-matrícula, Duplicação, Boletim, Cronograma, Relatórios) | P5b |
+| 12 | [12-platform.md](12-platform.md) | Platform redesign — owner-fronted accounts, formal shell, coin economy, community | Redesign |
+| 13 | [13-lms.md](13-lms.md) | LMS — admin/professor content pipeline, AI enrichment, enrollment, mastery-gated completion | P4a |
+| 14 | [14-live-social.md](14-live-social.md) | Live learning, social (polls/Q&A/chat), coaching, certificates, moderation | P4b/P4c |
+| 15 | [15-assessment-core.md](15-assessment-core.md) | Assessment core — events stream, question bank, exams, assignments/rubrics, unlock engine | P5a |
+| 16 | [16-gestao-automacao.md](16-gestao-automacao.md) | Auto-matrícula, Duplicação, Boletim, Cronograma, Relatórios | P5b |
+| 17 | [17-engajamento-pratica.md](17-engajamento-pratica.md) | Quick Updates/Checklists, exemplares de pares, autoavaliação, Readiness 2.0, Missions-lite | P5c |
 
 ## Current state → target state (one screen)
 
