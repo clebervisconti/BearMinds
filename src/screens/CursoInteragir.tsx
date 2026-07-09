@@ -6,6 +6,7 @@ import { AppShell } from "../components/AppShell";
 import { ErrorNote } from "../components/common";
 import { api, ApiError, type ChatMessage, type QAItem, type PollView } from "../lib/api";
 import { useMe, activeChild } from "../lib/queries";
+import { useRealtimeChannel } from "../lib/liveSocket";
 
 type Tab = "chat" | "qa" | "polls";
 
@@ -65,12 +66,17 @@ function ChatPanel({ courseId, childId, isStaff }: { courseId: string; childId: 
     }
   }, [courseId, childId, dm]);
 
+  // Tempo real (P6): WS avisa "nova mensagem" → refetch pelo mesmo `load()`. Cai para polling se a WS não conectar.
+  const wsPath = dm ? `/ws/chat/thread/${dm}?child_id=${encodeURIComponent(childId)}` : `/ws/chat/channel/${courseId}?child_id=${encodeURIComponent(childId)}`;
+  const wsConnected = useRealtimeChannel(wsPath, () => void load());
+
   useEffect(() => {
     setMsgs([]);
     void load();
+    if (wsConnected) return;
     const t = setInterval(() => void load(), 3000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, wsConnected]);
 
   useEffect(() => { if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight; }, [msgs]);
 

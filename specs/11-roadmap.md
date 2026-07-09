@@ -101,12 +101,21 @@ curso + DM estudante↔staff) · dashboard de tutoria (alunos em risco + anotaç
 
 ### P6 — escala & infra (months 4–12, gated by D90 — **gate não atingido, nenhum usuário real ainda**)
 Todo o P6 é explicitamente gated pela métrica D90 da tabela abaixo, que não existe neste ambiente de
-desenvolvimento (zero usuários reais/pagantes). Nenhum item foi construído nesta sessão — construir sem o
-gate contradiria a própria disciplina de "kill criteria" deste roadmap:
-- **WebSockets** (substitui o polling dos live games/chat) quando a escala exigir — o polling atual (P4b/c)
-  está testado e em produção; migrar sem pressão real de escala é risco de regressão sem benefício mensurável.
-- **Vídeo self-hosted / HLS / CDN** (hoje: embeds YouTube/Vimeo + upload ≤200MB) — decisão de custo/infra do owner.
-- Projetos PBL/metaprojetos completos (Inteli) · Ensino Médio (ENEM) · piloto B2B lighthouse — conteúdo/vendas,
+desenvolvimento (zero usuários reais/pagantes). A disciplina de "kill criteria" deste roadmap segue valendo
+para decidir SE vale a pena manter/expandir cada item — mas onde o item é puro código sem decisão de negócio
+pendente, construir agora (2026-07-09) é razoável; só falta o gate de escala para justificar o RISCO de trocar
+algo já testado, não a viabilidade técnica:
+- ✅ **WebSockets** (substitui o polling dos live games/chat, `server/ws/`): construído como
+  **"push-to-refetch"** — o socket só avisa "algo mudou"; o cliente refaz o MESMO fetch REST já testado (zero
+  lógica de autorização/serialização duplicada, incluindo esconder a resposta antes do reveal em live games).
+  **Degradação automática e segura**: se o proxy reverso de produção (OpenLiteSpeed) não repassar o upgrade de
+  WebSocket — não verificado nesta sessão, sem acesso ao VPS — o cliente cai de volta ao polling testado sem
+  quebrar nada. Verificado com um round-trip real (registro → WS conecta → mutação REST → push recebido pelo
+  socket), não só testes unitários do hub. **Pendente do owner**: confirmar/configurar o `extprocessor` +
+  passthrough de `Upgrade`/`Connection` no vhost do VPS para a WS realmente funcionar em produção (ver DEPLOY.md).
+- ⏳ **Vídeo self-hosted / HLS / CDN** (hoje: embeds YouTube/Vimeo + upload ≤200MB) — decisão de custo/infra do
+  owner, não código.
+- ⏳ Projetos PBL/metaprojetos completos (Inteli) · Ensino Médio (ENEM) · piloto B2B lighthouse — conteúdo/vendas,
   não engenharia.
 
 ## Launch metrics (medir desde o dia 1 via 09 §9.3)

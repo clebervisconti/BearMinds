@@ -8,6 +8,7 @@ import { readJson, badRequest, forbidden, notFound, conflict, type AppEnv } from
 import { liveScore, pinFromBytes, LIVE_QUESTION_MS } from "../live/scoring.ts";
 import { awardCoins } from "../gamify.ts";
 import { emitEvent } from "../lib/events.ts";
+import { hub, liveChannel } from "../ws/hub.ts";
 import type { QuizQuestion } from "../../shared/contracts.ts";
 
 const app = new Hono<AppEnv>();
@@ -75,6 +76,7 @@ app.post("/api/admin/live/:id/next", requireParent, requireRole(...STAFF), (c) =
   const { questions } = quizForItem(s.item_id);
   if (s.state === "question") {
     db.prepare("UPDATE live_sessions SET state = 'reveal' WHERE id = ?").run(s.id);
+    hub.publish(liveChannel(s.pin));
     return c.json({ state: "reveal", current_q: s.current_q });
   }
   const next = s.current_q + 1;
@@ -83,9 +85,11 @@ app.post("/api/admin/live/:id/next", requireParent, requireRole(...STAFF), (c) =
     // moedas de participação (uma vez por sessão)
     const players = db.prepare("SELECT child_id, score FROM live_players WHERE session_id = ?").all(s.id) as { child_id: string; score: number }[];
     for (const p of players) if (p.score > 0) awardCoins(p.child_id, Math.min(60, Math.round(p.score / 100)), "live_game", s.id);
+    hub.publish(liveChannel(s.pin));
     return c.json({ state: "ended" });
   }
   db.prepare("UPDATE live_sessions SET state = 'question', current_q = ?, q_started_at = ? WHERE id = ?").run(next, nowIso(), s.id);
+  hub.publish(liveChannel(s.pin));
   return c.json({ state: "question", current_q: next });
 });
 
@@ -109,6 +113,7 @@ app.post("/api/live/join", requireParent, async (c) => {
   if (!child) throw notFound("child_not_found", "Perfil não encontrado.");
   db.prepare("INSERT OR IGNORE INTO live_players (session_id, child_id, nickname, score, joined_at) VALUES (?, ?, ?, 0, ?)").run(s.id, child_id, child.display_name, nowIso());
   emitEvent("live_join", { kind: "child", id: child_id }, { course_id: s.course_id, ref_kind: "live", ref_id: s.id });
+  hub.publish(liveChannel(s.pin));
   return c.json({ session_id: s.id });
 });
 
@@ -161,6 +166,7 @@ app.post("/api/live/:pin/answer", requireParent, async (c) => {
   db.prepare("INSERT INTO live_answers (session_id, child_id, q_index, choice, correct, ms, delta) VALUES (?, ?, ?, ?, ?, ?, ?)").run(s.id, child_id, s.current_q, choice, correct ? 1 : 0, ms, delta);
   if (delta > 0) db.prepare("UPDATE live_players SET score = score + ? WHERE session_id = ? AND child_id = ?").run(delta, s.id, child_id);
   emitEvent("live_answer", { kind: "child", id: child_id }, { course_id: s.course_id, ref_kind: "live", ref_id: s.id }, { correct, delta });
+  hub.publish(liveChannel(s.pin)); // avisa o host (fila de "respondidos") — o próprio aluno já sabe via `delta` na resposta
   return c.json({ ok: true, delta });
 });
 

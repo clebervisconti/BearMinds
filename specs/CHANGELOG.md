@@ -1,5 +1,33 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-09 — P6 iniciado: WebSockets para live games + chat (push-to-refetch, fallback automático)
+
+- **Reconsideração da sessão anterior:** P6 tinha sido marcado como "não iniciado, deliberadamente" (gated
+  por D90). Reavaliando item a item: WebSockets é código puro sem decisão de negócio pendente — só faltava
+  coragem de engenharia, não o gate de escala. Vídeo CDN (custo/infra) e PBL/ENEM/B2B (conteúdo/vendas)
+  continuam de fora — esses SIM dependem de decisão do owner ou não são engenharia.
+- **Design "push-to-refetch"** (`server/ws/hub.ts` + `server/ws/server.ts`): o WebSocket só avisa
+  `{"type":"update"}` — o cliente refaz o MESMO fetch REST que já usava no polling. Zero lógica de
+  autorização/serialização duplicada (ex.: esconder a resposta certa antes do "reveal" em live games
+  continua garantido pelo endpoint REST já testado, não reimplementado no socket).
+- **Autenticação no handshake**: `sessionFromCookieHeader` (novo em `server/lib/session.ts`) reusa a mesma
+  tabela `sessions` fora do ciclo de request do Hono. Autorização por canal reusa `courseAccess`/`threadAccess`
+  já existentes em `chat.ts` (exportadas, não duplicadas) + checagem direta de `live_sessions` por pin.
+- **Canais**: `/ws/live/:pin` (publica em `next`/`join`/`answer` de `live.ts`), `/ws/chat/channel/:courseId` e
+  `/ws/chat/thread/:id` (publica no envio de mensagem em `chat.ts`). Enquetes/Q&A ficam em polling (fora do
+  escopo textual do roadmap, que cita só "live games/chat").
+- **Degradação automática e seguro** (`src/lib/liveSocket.ts`, hook `useRealtimeChannel`): se a WS não
+  conectar — cenário esperado em produção até o proxy reverso do VPS ser configurado para passthrough de
+  `Upgrade`/`Connection`, não verificável sem acesso ao servidor — o cliente cai de volta ao polling já
+  testado (`LivePlay.tsx`, `LiveHost.tsx`, `CursoInteragir.tsx`). Nenhuma funcionalidade pode quebrar por
+  causa disso; documentado com instruções para o owner em `DEPLOY.md`.
+- **Verificação além dos testes unitários**: smoke test real de ponta a ponta — servidor com a camada WS
+  anexada, cliente `ws` autentica via registro real, conecta a `/ws/live/:pin`, dispara uma mutação REST real
+  (`POST /api/live/join`) e confirma o recebimento do push pelo socket. Também confirmado: upgrade sem
+  cookie → 401; upgrade autenticado mas canal inexistente → 403.
+- Verificado: `tsc --noEmit`/`vite build` verdes, **109 testes vitest** (+6 em `tests/websocket-hub.test.ts`,
+  hub de pub/sub puro). Guardrails (05)/LGPD (09) inalterados.
+
 ## 2026-07-09 — P5 completo (P5b gap + P5c ENTREGUE, spec 17) + P5-r parcial (paywall manual, correlação)
 
 - **Objetivo da sessão:** fechar o backlog P5 inteiro e avançar P5-r/P6 até onde código sozinho resolve —

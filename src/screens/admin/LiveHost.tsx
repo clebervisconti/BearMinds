@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../../components/AppShell";
 import { BearLoader, ErrorNote } from "../../components/common";
 import { api, ApiError, type LiveState } from "../../lib/api";
+import { useRealtimeChannel } from "../../lib/liveSocket";
 
 const OPT_COLORS = ["#e0284d", "#1668dc", "#c98a00", "#12805c", "#6d28d9", "#0e7490"];
 const OPT_SHAPES = ["▲", "◆", "●", "■", "★", "♦"];
@@ -38,12 +39,16 @@ export function LiveHost() {
     } catch { /* transitório */ }
   }, [session?.id, session?.pin]);
 
+  // Tempo real (P6): WS avisa "algo mudou" → refetch pelo mesmo `poll()`. Cai para polling se a WS não conectar.
+  const wsConnected = useRealtimeChannel(session ? `/ws/live/${session.pin}` : null, () => void poll());
+
   useEffect(() => {
     if (!session) return;
     void poll();
+    if (wsConnected) return;
     pollRef.current = setInterval(() => void poll(), 1500);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [session, poll]);
+  }, [session, poll, wsConnected]);
 
   async function advance() {
     if (!session) return;
