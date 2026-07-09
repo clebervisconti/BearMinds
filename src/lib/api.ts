@@ -163,6 +163,25 @@ export const api = {
   adminAssign: (courseId: string, child_ids: string[]) =>
     req<{ assigned: number }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/assign`, { child_ids }),
 
+  // ---- Gestão & automação (spec 16 / P5b) ----
+  adminGradebook: (courseId: string) =>
+    req<Gradebook>("GET", `/admin/courses/${encodeURIComponent(courseId)}/gradebook`),
+  adminCourseReports: (courseId: string) =>
+    req<CourseReports>("GET", `/admin/courses/${encodeURIComponent(courseId)}/reports`),
+  adminEnrollmentRules: (courseId: string) =>
+    req<{ rules: EnrollmentRule[] }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/enrollment-rules`),
+  adminCreateEnrollmentRule: (courseId: string, input: { grade?: string | null; class_id?: string | null }) =>
+    req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/enrollment-rules`, input),
+  adminDeleteEnrollmentRule: (ruleId: string) =>
+    req<{ ok: true }>("DELETE", `/admin/enrollment-rules/${encodeURIComponent(ruleId)}`),
+  adminDuplicateCourse: (courseId: string, input: { title: string; class_id: string }) =>
+    req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/duplicate`, input),
+
+  myGrades: (child_id: string) =>
+    req<{ courses: GradeCourse[] }>("GET", `/my/grades?child_id=${encodeURIComponent(child_id)}`),
+  myTimeline: (child_id: string) =>
+    req<{ timeline: TimelineItem[] }>("GET", `/my/timeline?child_id=${encodeURIComponent(child_id)}`),
+
   inviteInfo: (token: string) =>
     req<{ email: string; role: string; institution: string | null }>("GET", `/invites/${encodeURIComponent(token)}`),
   inviteAccept: (token: string, password: string) =>
@@ -322,6 +341,33 @@ export interface LearnCourse {
     backlog: { id: string; text: string; state: "new" | "reviewing" | "mastered" }[];
     items: LearnItem[];
   }[];
+}
+
+// ---- P5b: Gestão & automação (spec 16) ----
+export interface GradebookActivity { id: string; title: string; kind: "assignment" | "exam"; max_points: number }
+export interface GradebookStudent {
+  id: string; display_name: string; grade: string; class_id: string | null;
+  grades: Record<string, number | null>; // activity_id -> normalized score 0..1
+  average: number | null;
+}
+export interface Gradebook { activities: GradebookActivity[]; students: GradebookStudent[] }
+
+export interface CourseReports {
+  active_students_7d: number; total_students: number; participation_rate: number;
+  average_completion: number; average_exam_score: number; average_assignment_score: number;
+}
+
+export interface EnrollmentRule { id: string; grade: string | null; class_id: string | null; created_at: string }
+
+export interface GradeCourse {
+  id: string; title: string; cover_emoji: string;
+  grades: Record<string, { title: string; score: number | null }>;
+  average: number | null;
+}
+
+export interface TimelineItem {
+  id: string; title: string; kind: "assignment" | "exam"; due_at: string;
+  course_id: string; course_title: string; available: boolean; lock_reason: string | null;
 }
 
 export const EXPORT_URL = "/api/me/export";
