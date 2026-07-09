@@ -11,6 +11,7 @@ import { mountRoutes } from "./routes/index.ts";
 import { appVersion } from "./version.ts";
 import { AppError, type AppEnv } from "./lib/http.ts";
 import { gateMiddleware, mountGate, gateEnabled } from "./lib/gate.ts";
+import { attachWebSocketServer } from "./ws/server.ts";
 
 // 1) Sobe o schema do SQLite (idempotente) antes de aceitar tráfego.
 initDb();
@@ -53,9 +54,13 @@ if (serveDist) {
   });
 }
 
-serve({ fetch: app.fetch, port: env.port, hostname: process.env.HOST || undefined }, (info) => {
+const server = serve({ fetch: app.fetch, port: env.port, hostname: process.env.HOST || undefined }, (info) => {
   logger.info(
     { port: info.port, version: appVersion, env: env.isProd ? "prod" : "dev", serveDist, gate: gateEnabled() ? "apple" : "off" },
     `BearMinds API on :${info.port}`,
   );
 });
+
+// P6 (roadmap 11): tempo real para live games + chat, com fallback automático a polling no cliente
+// se o upgrade de WebSocket não passar pelo proxy reverso (ver server/ws/server.ts).
+attachWebSocketServer(server);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, newId, nowIso } from "../db.ts";
 import { requireParent, csrfGuard, ownChildOrThrow, parentRole } from "../lib/session.ts";
 import { readJson, badRequest, forbidden, notFound, type AppEnv } from "../lib/http.ts";
+import { hub, chatChannel } from "../ws/hub.ts";
 
 const app = new Hono<AppEnv>();
 app.use("/api/chat/*", csrfGuard);
@@ -18,7 +19,7 @@ function course(id: string): CourseRow {
 }
 
 interface Access { isStaff: boolean; childId: string | null; name: string }
-function courseAccess(c: { get: (k: "parentId" | "activeChildId") => string | null }, courseId: string, childIdParam?: string | null): Access {
+export function courseAccess(c: { get: (k: "parentId" | "activeChildId") => string | null }, courseId: string, childIdParam?: string | null): Access {
   const parentId = c.get("parentId")!;
   const cs = course(courseId);
   const me = parentRole(parentId);
@@ -68,6 +69,7 @@ app.post("/api/chat/course/:courseId/channel", requireParent, async (c) => {
   db.prepare(
     "INSERT INTO chat_messages (id, scope, scope_id, sender_child_id, sender_parent_id, sender_name, body, created_at) VALUES (?, 'channel', ?, ?, ?, ?, ?, ?)",
   ).run(id, channelId, access.childId, access.isStaff ? c.get("parentId") : null, access.name, body, nowIso());
+  hub.publish(chatChannel("channel", channelId));
   return c.json({ id }, 201);
 });
 
@@ -103,7 +105,7 @@ app.post("/api/chat/thread/staff", requireParent, async (c) => {
 });
 
 interface ThreadRow { id: string; course_id: string; child_id: string; staff_parent_id: string }
-function threadAccess(parentId: string, activeChild: string | null, threadId: string, childParam?: string | null): { thread: ThreadRow; isStaff: boolean; childId: string | null; name: string } {
+export function threadAccess(parentId: string, activeChild: string | null, threadId: string, childParam?: string | null): { thread: ThreadRow; isStaff: boolean; childId: string | null; name: string } {
   const t = db.prepare("SELECT * FROM chat_threads WHERE id = ?").get(threadId) as ThreadRow | undefined;
   if (!t) throw notFound("thread_not_found", "Conversa não encontrada.");
   if (t.staff_parent_id === parentId) {
@@ -131,6 +133,7 @@ app.post("/api/chat/thread/:id", requireParent, async (c) => {
   db.prepare(
     "INSERT INTO chat_messages (id, scope, scope_id, sender_child_id, sender_parent_id, sender_name, body, created_at) VALUES (?, 'thread', ?, ?, ?, ?, ?, ?)",
   ).run(id, c.req.param("id"), acc.childId, acc.isStaff ? c.get("parentId") : null, acc.name, body, nowIso());
+  hub.publish(chatChannel("thread", c.req.param("id")));
   return c.json({ id }, 201);
 });
 

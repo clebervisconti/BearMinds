@@ -5,6 +5,7 @@ import { AppShell } from "../components/AppShell";
 import { ErrorNote } from "../components/common";
 import { api, ApiError, type LiveState } from "../lib/api";
 import { useMe, activeChild } from "../lib/queries";
+import { useRealtimeChannel } from "../lib/liveSocket";
 
 const OPT_COLORS = ["#e0284d", "#1668dc", "#c98a00", "#12805c", "#6d28d9", "#0e7490"];
 const OPT_SHAPES = ["▲", "◆", "●", "■", "★", "♦"];
@@ -45,12 +46,17 @@ export function LivePlay() {
     return () => clearInterval(t);
   }, []);
 
+  // Tempo real (P6): WS avisa "algo mudou" → refetch pelo mesmo `poll()`. Se não conectar
+  // (proxy de produção sem passthrough de upgrade), cai automaticamente para o polling testado.
+  const wsConnected = useRealtimeChannel(joined ? `/ws/live/${pin}` : null, () => void poll());
+
   useEffect(() => {
     if (!joined) return;
     void poll();
+    if (wsConnected) return; // WS entrega as atualizações — sem polling redundante
     pollRef.current = setInterval(() => void poll(), 1200);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [joined, poll]);
+  }, [joined, poll, wsConnected]);
 
   async function join() {
     if (!child || pin.length !== 6) return;

@@ -56,6 +56,17 @@ function loadSession(id: string): SessionRow | null {
   return row;
 }
 
+// Autenticação fora do ciclo de request do Hono (handshake de upgrade do WebSocket, spec P6/roadmap).
+// Reusa a mesma tabela `sessions` — sem lógica de auth duplicada.
+export function sessionFromCookieHeader(cookieHeader: string | undefined): { parentId: string; activeChildId: string | null } | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.split(";").map((p) => p.trim()).find((p) => p.startsWith(`${COOKIE}=`));
+  if (!match) return null;
+  const id = decodeURIComponent(match.slice(COOKIE.length + 1));
+  const session = loadSession(id);
+  return session ? { parentId: session.parent_id, activeChildId: session.active_child_id } : null;
+}
+
 // Exige responsável autenticado. Popula c.var e faz sliding expiry.
 export const requireParent: MiddlewareHandler<AppEnv> = async (c, next) => {
   const id = getCookie(c, COOKIE);
