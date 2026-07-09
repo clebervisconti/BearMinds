@@ -5,6 +5,7 @@
 import { db, nowIso } from "../db.ts";
 import { logger } from "../logger.ts";
 import { pruneEvents } from "../lib/events.ts";
+import { pruneExpiredMissions } from "../lib/missions.ts";
 
 const DELETION_WINDOW_DAYS = 30;
 
@@ -107,7 +108,8 @@ export function runNightly(now = new Date()): void {
   computeDailyMetrics(new Date(now.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10));
   const cohorts = computeCohorts(now);
   const prunedEvents = pruneEvents(365);   // retenção do events stream (spec 15.1)
-  
+  const prunedMissions = pruneExpiredMissions(now);   // retenção limitada de mídia (spec 17.5, LGPD)
+
   // Otimização do banco de dados (SQLite PRAGMA optimize)
   try {
     db.exec("PRAGMA optimize;");
@@ -115,7 +117,7 @@ export function runNightly(now = new Date()): void {
     logger.error({ err: String(e) }, "erro ao rodar PRAGMA optimize");
   }
 
-  logger.info({ del, cohorts, prunedEvents }, "nightly job concluído");
+  logger.info({ del, cohorts, prunedEvents, prunedMissions }, "nightly job concluído");
 }
 
 // Executado diretamente (cron) → roda e sai.

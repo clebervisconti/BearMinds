@@ -182,6 +182,80 @@ export const api = {
   myTimeline: (child_id: string) =>
     req<{ timeline: TimelineItem[] }>("GET", `/my/timeline?child_id=${encodeURIComponent(child_id)}`),
 
+  // ---- Grupos dentro do curso (spec 16.6) ----
+  courseGroups: (courseId: string) =>
+    req<{ groups: CourseGroup[]; unassigned: number }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/groups`),
+  createCourseGroup: (courseId: string, title: string) =>
+    req<{ id: string }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/groups`, { title }),
+  deleteCourseGroup: (groupId: string) => req<{ ok: true }>("DELETE", `/admin/groups/${encodeURIComponent(groupId)}`),
+  assignToGroup: (groupId: string, child_ids: string[]) =>
+    req<{ assigned: number }>("POST", `/admin/groups/${encodeURIComponent(groupId)}/assign`, { child_ids }),
+  unassignFromGroup: (courseId: string, child_id: string) =>
+    req<{ ok: true }>("POST", `/admin/courses/${encodeURIComponent(courseId)}/groups/unassign`, { child_id }),
+
+  // ---- Quick Updates + Checklists (spec 17.1) ----
+  checklist: (itemId: string, child_id: string) =>
+    req<{ steps: ChecklistStep[] }>("GET", `/learn/items/${encodeURIComponent(itemId)}/checklist?child_id=${encodeURIComponent(child_id)}`),
+  toggleChecklistStep: (itemId: string, step: number, child_id: string) =>
+    req<{ done: boolean; all_done: boolean }>("POST", `/learn/items/${encodeURIComponent(itemId)}/checklist/${step}/toggle`, { child_id }),
+
+  // ---- Exemplares de pares (spec 17.2) ----
+  promoteExemplar: (submissionId: string, note?: string | null) =>
+    req<{ id: string }>("POST", `/admin/submissions/${encodeURIComponent(submissionId)}/promote-exemplar`, { note: note ?? null }),
+  courseExemplarsAdmin: (courseId: string) =>
+    req<{ exemplars: AdminExemplar[] }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/exemplars`),
+  deleteExemplar: (id: string) => req<{ ok: true }>("DELETE", `/admin/exemplars/${encodeURIComponent(id)}`),
+  pendingExemplars: () => req<{ pending: PendingExemplar[] }>("GET", "/exemplars/pending"),
+  consentExemplar: (id: string, granted: boolean) => req<{ ok: true }>("POST", `/exemplars/${encodeURIComponent(id)}/consent`, { granted }),
+  courseExemplars: (courseId: string, child_id: string) =>
+    req<{ exemplars: Exemplar[] }>("GET", `/learn/courses/${encodeURIComponent(courseId)}/exemplars?child_id=${encodeURIComponent(child_id)}`),
+
+  // ---- Auto-avaliação vs professor (spec 17.3) ----
+  selfAssess: (submissionId: string, input: { rubric_id?: string | null; selections?: number[][] | null; points?: number | null; reflection?: string | null }) =>
+    req<{ ok: true; points: number }>("POST", `/learn/submissions/${encodeURIComponent(submissionId)}/self-assess`, input),
+  mySelfAssessment: (submissionId: string) =>
+    req<{ self_assessment: { points: number; reflection: string | null; created_at: string } | null }>("GET", `/learn/submissions/${encodeURIComponent(submissionId)}/self-assess`),
+  selfAssessmentGap: (courseId: string) =>
+    req<{ submissions: SelfAssessGapRow[]; average_gap: number | null; pending_teacher_review: number }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/self-assessment-gap`),
+
+  // ---- Readiness 2.0 (spec 17.4) ----
+  courseReadiness: (courseId: string) =>
+    req<{ students: StudentReadiness[]; course_average: number | null }>("GET", `/admin/courses/${encodeURIComponent(courseId)}/readiness`),
+  myReadiness: (child_id: string) =>
+    req<{ courses: CourseReadiness[] }>("GET", `/my/readiness?child_id=${encodeURIComponent(child_id)}`),
+
+  // ---- Missions-lite (spec 17.5) ----
+  missionUpload: async (file: File, child_id: string) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("child_id", child_id);
+    const res = await fetch("/api/learn/missions/upload", { method: "POST", body: form, credentials: "include", headers: { "X-BM-Client": "pwa" } });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new ApiError(res.status, data?.error?.code ?? "error", data?.error?.message ?? "Erro no envio.");
+    return data as { id: string; name: string; mime: string };
+  },
+  submitMission: (itemId: string, child_id: string, file_id: string, transcript?: string | null) =>
+    req<{ ok: true; retention_until: string }>("POST", `/learn/items/${encodeURIComponent(itemId)}/mission`, { child_id, file_id, transcript: transcript ?? null }),
+  myMission: (itemId: string, child_id: string) =>
+    req<{ submission: MissionSubmission | null }>("GET", `/learn/items/${encodeURIComponent(itemId)}/mission?child_id=${encodeURIComponent(child_id)}`),
+  missionSubmissionsForItem: (itemId: string) =>
+    req<{ submissions: AdminMissionSubmission[] }>("GET", `/admin/items/${encodeURIComponent(itemId)}/mission-submissions`),
+  missionAiPreanalysis: (id: string) => req<{ ai_preanalysis: MissionAiPreanalysis }>("POST", `/admin/mission-submissions/${encodeURIComponent(id)}/ai-preanalysis`),
+  reviewMission: (id: string, input: { feedback: string; rubric_id?: string | null; selections?: number[][] | null; points?: number | null }) =>
+    req<{ ok: true; points: number | null }>("POST", `/admin/mission-submissions/${encodeURIComponent(id)}/review`, input),
+
+  // ---- Founding-member paywall (P5-r) ----
+  paywall: () => req<{ link: string | null; price_label: string | null; is_founding_member: boolean }>("GET", "/paywall"),
+  paywallAdmin: () => req<{ link: string | null; price_label: string | null; founding_members_count: number }>("GET", "/admin/paywall"),
+  paywallSet: (link: string, price_label: string) => req<{ ok: true }>("POST", "/admin/paywall", { link, price_label }),
+  paywallMarkByEmail: (email: string, granted: boolean) => req<{ ok: true; id: string }>("POST", "/admin/paywall/mark-by-email", { email, granted }),
+  paywallMembers: () => req<{ members: { id: string; email: string; founding_member_at: string }[] }>("GET", "/admin/paywall/members"),
+
+  // ---- Correlação pós-prova (P5-r) ----
+  predictionCorrelation: (courseId: string) =>
+    req<{ points: { predicted: number; actual: number; child_id: string; exam_id: string }[]; correlation: number | null; n: number; note: string }>(
+      "GET", `/admin/courses/${encodeURIComponent(courseId)}/prediction-correlation`),
+
   inviteInfo: (token: string) =>
     req<{ email: string; role: string; institution: string | null }>("GET", `/invites/${encodeURIComponent(token)}`),
   inviteAccept: (token: string, password: string) =>
@@ -369,6 +443,36 @@ export interface TimelineItem {
   id: string; title: string; kind: "assignment" | "exam"; due_at: string;
   course_id: string; course_title: string; available: boolean; lock_reason: string | null;
 }
+
+// ---- Grupos dentro do curso (spec 16.6) ----
+export interface CourseGroup { id: string; title: string; created_at: string; members: number }
+
+// ---- Quick Updates + Checklists (spec 17.1) ----
+export interface ChecklistStep { index: number; label: string; done: boolean }
+
+// ---- Exemplares de pares (spec 17.2) ----
+export interface AdminExemplar { id: string; note: string | null; consent_state: "pending" | "granted" | "denied"; created_at: string; student: string; body_text: string | null }
+export interface PendingExemplar { id: string; note: string | null; created_at: string; student: string; course_title: string }
+export interface Exemplar { id: string; note: string | null; created_at: string; student: string; body_text: string | null }
+
+// ---- Auto-avaliação vs professor (spec 17.3) ----
+export interface SelfAssessGapRow { submission_id: string; student: string; item_title: string; self_fraction: number; teacher_fraction: number; gap: number }
+
+// ---- Readiness 2.0 (spec 17.4) ----
+export interface ReadinessDims { knowledge: number | null; skill: number | null; execution: number | null; overall: number | null }
+export interface StudentReadiness extends ReadinessDims { id: string; display_name: string }
+export interface CourseReadiness extends ReadinessDims { id: string; title: string; cover_emoji: string }
+
+// ---- Missions-lite (spec 17.5) ----
+export interface MissionSubmission {
+  id: string; file_id: string; transcript: string | null; status: "submitted" | "reviewed";
+  retention_until: string; submitted_at: string; review: { points: number | null; feedback: string; created_at: string } | null;
+}
+export interface AdminMissionSubmission {
+  id: string; child_id: string; student: string; file_id: string; transcript: string | null;
+  status: string; submitted_at: string; retention_until: string; points: number | null;
+}
+export interface MissionAiPreanalysis { summary: string; coverage: string[]; gaps: string[]; keywords_found: string[] }
 
 export const EXPORT_URL = "/api/me/export";
 

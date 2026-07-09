@@ -6,9 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { useInstitutions, useMe } from "../lib/queries";
 import { BearLoader, ErrorNote, Mascot } from "../components/common";
-import type { ConsentScope } from "../../shared/contracts";
 
-const CONSENT_COPY: { scope: ConsentScope; label: string; required: boolean }[] = [
+const CONSENT_COPY: { scope: "account" | "ai_generation" | "progress_tracking" | "email_updates"; label: string; required: boolean }[] = [
   { scope: "account", label: "Criar a conta e o perfil do meu filho (apelido, ano de nascimento e série — nada além disso).", required: true },
   { scope: "ai_generation", label: "Gerar conteúdo de estudo com IA a partir dos tópicos que meu filho escolher.", required: true },
   { scope: "progress_tracking", label: "Acompanhar o progresso de aprendizagem para agendar as revisões certas.", required: true },

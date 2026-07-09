@@ -4,11 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { BearLoader, ErrorNote, Progress } from "../components/common";
-import { api, ApiError, type LearnCourse, type LearnItem } from "../lib/api";
+import {
+  api, ApiError, type LearnCourse, type LearnItem, type ChecklistStep, type MissionSubmission, type Exemplar,
+} from "../lib/api";
 import { useMe, activeChild } from "../lib/queries";
 
 const KIND_ICON: Record<string, string> = {
-  video: "🎬", document: "📄", lesson: "📖", quiz: "✍️", game: "🎮", live: "📡",
+  video: "🎬", document: "📄", lesson: "📖", quiz: "✍️", game: "🎮", live: "📡", quick_update: "⚡", mission: "🎙️",
 };
 
 function embedUrl(url: string): string | null {
@@ -107,6 +109,10 @@ export function CursoPage() {
                   {m.items.map((item) => (
                     item.kind === "assignment" ? (
                       <AssignmentCard key={item.id} item={item} childId={child.id} enrolled={data.enrolled} moduleLocked={m.locked} onChanged={() => void load()} />
+                    ) : item.kind === "quick_update" ? (
+                      <QuickUpdateCard key={item.id} item={item} childId={child.id} enrolled={data.enrolled} moduleLocked={m.locked} onChanged={() => void load()} />
+                    ) : item.kind === "mission" ? (
+                      <MissionCard key={item.id} item={item} childId={child.id} enrolled={data.enrolled} moduleLocked={m.locked} onChanged={() => void load()} />
                     ) : (
                     <ItemCard
                       key={item.id}
@@ -152,6 +158,7 @@ export function CursoPage() {
           </div>
 
           {data.enrolled && id && <ExamsSection courseId={id} childId={child.id} />}
+          {data.enrolled && id && <ExemplaresSection courseId={id} childId={child.id} />}
         </>
       )}
     </AppShell>
@@ -198,8 +205,30 @@ function AssignmentCard({ item, childId, enrolled, moduleLocked, onChanged }: {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [selfPoints, setSelfPoints] = useState("");
+  const [selfReflection, setSelfReflection] = useState("");
+  const [selfSavedAt, setSelfSavedAt] = useState<string | null>(null);
+  const [selfBusy, setSelfBusy] = useState(false);
 
   useEffect(() => { if (open) api.mySubmission(item.id, childId).then((r) => { setSub(r.submission); setText(r.submission?.body_text ?? ""); }).catch(() => {}); }, [open, item.id, childId]);
+  useEffect(() => {
+    if (!sub) return;
+    api.mySelfAssessment(sub.id).then((r) => {
+      if (r.self_assessment) { setSelfPoints(String(r.self_assessment.points)); setSelfReflection(r.self_assessment.reflection ?? ""); setSelfSavedAt(r.self_assessment.created_at); }
+    }).catch(() => {});
+  }, [sub?.id]);
+
+  async function sendSelfAssess() {
+    if (!sub) return;
+    setSelfBusy(true); setErr(null);
+    try {
+      const max = p.max_points ?? 100;
+      const pts = Math.max(0, Math.min(max, Number(selfPoints)));
+      await api.selfAssess(sub.id, { points: pts, reflection: selfReflection.trim() || null });
+      setSelfSavedAt(new Date().toISOString());
+    } catch (e) { setErr(e instanceof ApiError ? e.message : "Erro ao salvar autoavaliação."); }
+    finally { setSelfBusy(false); }
+  }
 
   async function send() {
     setBusy(true); setErr(null);
@@ -237,6 +266,20 @@ function AssignmentCard({ item, childId, enrolled, moduleLocked, onChanged }: {
           <button className="bm-btn bm-btn-sm" disabled={busy || !text.trim()} onClick={send} style={{ justifySelf: "start" }}>
             {busy ? "Enviando…" : sub ? "Reenviar" : "Entregar"}
           </button>
+          {sub && (
+            <div className="bm-card-flat" style={{ padding: ".6rem .8rem", background: "var(--bm-surface-2)", display: "grid", gap: ".4rem" }}>
+              <div className="bm-eyebrow">🪞 Como você avalia sua entrega?</div>
+              <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
+                <input className="bm-input" type="number" min={0} max={p.max_points ?? 100} placeholder={`0–${p.max_points ?? 100}`} value={selfPoints} onChange={(e) => setSelfPoints(e.target.value)} style={{ width: 100 }} />
+                <span className="bm-meta">de {p.max_points ?? 100} pts</span>
+              </div>
+              <textarea className="bm-input" rows={2} placeholder="O que você acha que fez bem? O que faltou?" value={selfReflection} onChange={(e) => setSelfReflection(e.target.value)} style={{ resize: "vertical" }} />
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" disabled={selfBusy || selfPoints === ""} onClick={sendSelfAssess} style={{ justifySelf: "start" }}>
+                {selfBusy ? "Salvando…" : selfSavedAt ? "Atualizar autoavaliação" : "Salvar autoavaliação"}
+              </button>
+              {selfSavedAt && <div className="bm-meta">Salva em {new Date(selfSavedAt).toLocaleDateString("pt-BR")}.</div>}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -304,5 +347,174 @@ function ItemCard({ item, moduleLocked, open, enrolled, onToggle, onStart, onDon
         </div>
       )}
     </div>
+  );
+}
+
+// ---------- Quick Update + Checklist (spec 17.1) ----------
+function QuickUpdateCard({ item, childId, enrolled, moduleLocked, onChanged }: {
+  item: LearnItem; childId: string; enrolled: boolean; moduleLocked: boolean; onChanged: () => void;
+}) {
+  const p = (item.payload ?? {}) as { body?: string; questions?: { prompt: string; options: string[]; correct: number }[]; checklist?: { label: string }[] };
+  const locked = item.locked || moduleLocked;
+  const done = item.progress.status === "done";
+  const [open, setOpen] = useState(false);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [steps, setSteps] = useState<ChecklistStep[] | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open && (p.checklist?.length ?? 0) > 0) api.checklist(item.id, childId).then((r) => setSteps(r.steps)).catch(() => {});
+  }, [open, item.id, childId]);
+
+  async function toggleStep(index: number) {
+    await api.toggleChecklistStep(item.id, index, childId);
+    const r = await api.checklist(item.id, childId);
+    setSteps(r.steps);
+  }
+
+  async function finish() {
+    setBusy(true);
+    try {
+      const qs = p.questions ?? [];
+      const score = qs.length > 0 ? qs.filter((q, i) => answers[i] === q.correct).length / qs.length : 1;
+      await api.learnItemProgress(item.id, childId, "done", score);
+      onChanged();
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="bm-card-flat" style={{ padding: ".65rem .85rem", display: "grid", gap: ".5rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
+        <span aria-hidden>{locked ? "🔒" : "⚡"}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontWeight: 600, fontSize: ".92rem", textDecoration: done ? "line-through" : "none", color: done || locked ? "var(--bm-muted)" : "var(--bm-ink)" }}>{item.title}</span>
+          {locked && item.lock_reason && <span className="bm-meta"> · {item.lock_reason}</span>}
+          {!locked && <span className="bm-meta"> · ~3 min</span>}
+        </div>
+        {locked ? <span className="bm-meta">🔒 bloqueado</span>
+          : done ? <span className="bm-chip" style={{ color: "var(--bm-success)", fontSize: ".74rem" }}>✓ feito</span>
+          : !enrolled ? <span className="bm-meta">inscreva-se</span>
+          : <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Abrir"}</button>}
+      </div>
+      {open && enrolled && !locked && (
+        <div style={{ display: "grid", gap: ".6rem" }}>
+          {p.body && <div className="bm-card" style={{ padding: ".6rem .8rem", background: "var(--bm-surface-2)", border: 0, fontSize: ".9rem", whiteSpace: "pre-wrap" }}>{p.body}</div>}
+          {(p.questions ?? []).map((q, qi) => (
+            <div key={qi} style={{ display: "grid", gap: ".3rem" }}>
+              <div style={{ fontWeight: 600, fontSize: ".9rem" }}>{q.prompt}</div>
+              <div style={{ display: "flex", gap: ".35rem", flexWrap: "wrap" }}>
+                {q.options.map((o, oi) => (
+                  <button key={oi} className={`bm-btn-sm ${answers[qi] === oi ? "bm-btn" : "bm-btn bm-btn-ghost"}`} disabled={done} onClick={() => setAnswers((a) => ({ ...a, [qi]: oi }))}>{o}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {steps && steps.length > 0 && (
+            <div style={{ display: "grid", gap: ".3rem" }}>
+              <div className="bm-eyebrow">Passos</div>
+              {steps.map((s) => (
+                <label key={s.index} style={{ display: "flex", gap: ".5rem", alignItems: "center", fontSize: ".88rem" }}>
+                  <input type="checkbox" checked={s.done} onChange={() => void toggleStep(s.index)} style={{ width: 18, height: 18 }} />
+                  <span style={{ textDecoration: s.done ? "line-through" : "none", color: s.done ? "var(--bm-muted)" : "inherit" }}>{s.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {!done && (
+            <button className="bm-btn bm-btn-sm" disabled={busy} onClick={finish} style={{ justifySelf: "start" }}>
+              {busy ? "Enviando…" : "Concluí este Quick Update ✓"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Mission (spec 17.5): gravação de áudio/vídeo + transcrição digitada ----------
+function MissionCard({ item, childId, enrolled, moduleLocked, onChanged }: {
+  item: LearnItem; childId: string; enrolled: boolean; moduleLocked: boolean; onChanged: () => void;
+}) {
+  const p = (item.payload ?? {}) as { prompt?: string; media_type?: "audio" | "video"; max_points?: number };
+  const locked = item.locked || moduleLocked;
+  const [open, setOpen] = useState(false);
+  const [sub, setSub] = useState<MissionSubmission | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [transcript, setTranscript] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => { if (open) api.myMission(item.id, childId).then((r) => setSub(r.submission)).catch(() => {}); }, [open, item.id, childId]);
+
+  async function send() {
+    if (!file) return;
+    setErr(null); setBusy("Enviando arquivo…");
+    try {
+      const up = await api.missionUpload(file, childId);
+      setBusy("Registrando…");
+      await api.submitMission(item.id, childId, up.id, transcript.trim() || null);
+      const r = await api.myMission(item.id, childId);
+      setSub(r.submission);
+      onChanged();
+    } catch (e) { setErr(e instanceof ApiError ? e.message : "Erro ao enviar."); }
+    finally { setBusy(null); }
+  }
+
+  return (
+    <div className="bm-card-flat" style={{ padding: ".65rem .85rem", display: "grid", gap: ".5rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
+        <span aria-hidden>{locked ? "🔒" : "🎙️"}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontWeight: 600, fontSize: ".92rem", color: locked ? "var(--bm-muted)" : "var(--bm-ink)" }}>{item.title}</span>
+          {locked && item.lock_reason && <span className="bm-meta"> · {item.lock_reason}</span>}
+        </div>
+        {locked ? <span className="bm-meta">🔒 bloqueado</span>
+          : item.progress.status === "done" ? <span className="bm-chip" style={{ color: "var(--bm-success)", fontSize: ".74rem" }}>✓ enviada</span>
+          : !enrolled ? <span className="bm-meta">inscreva-se</span>
+          : <button className="bm-btn bm-btn-sm" onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Abrir missão"}</button>}
+      </div>
+      {open && !locked && enrolled && (
+        <div style={{ display: "grid", gap: ".5rem" }}>
+          {p.prompt && <div className="bm-card" style={{ padding: ".6rem .8rem", background: "var(--bm-surface-2)", border: 0, fontSize: ".9rem", whiteSpace: "pre-wrap" }}>{p.prompt}</div>}
+          <div className="bm-meta">Requer autorização de gravação de mídia (em Configurações → Consentimentos).</div>
+          {sub?.review && (
+            <div className="bm-card-flat" style={{ padding: ".6rem .8rem", borderLeft: "3px solid var(--bm-success)" }}>
+              <div className="bm-eyebrow">Feedback do professor{sub.review.points !== null ? ` · ${sub.review.points} pts` : ""}</div>
+              <div style={{ fontSize: ".9rem" }}>{sub.review.feedback}</div>
+            </div>
+          )}
+          {sub && (
+            <div className="bm-meta">Envio de {new Date(sub.submitted_at).toLocaleDateString("pt-BR")} · retido até {new Date(sub.retention_until).toLocaleDateString("pt-BR")}.</div>
+          )}
+          <label className="bm-meta">Arquivo ({p.media_type === "video" ? "MP4/WEBM" : "MP3/M4A/WEBM/WAV"}):{" "}
+            <input type="file" accept={p.media_type === "video" ? "video/mp4,video/webm" : "audio/mpeg,audio/mp4,audio/webm,audio/wav"} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </label>
+          <textarea className="bm-input" rows={3} placeholder="Digite uma transcrição ou resumo do que você gravou (usado só para a pré-análise do professor — não há transcrição automática)." value={transcript} onChange={(e) => setTranscript(e.target.value)} style={{ resize: "vertical" }} />
+          {err && <ErrorNote>{err}</ErrorNote>}
+          <button className="bm-btn bm-btn-sm" disabled={!!busy || !file} onClick={send} style={{ justifySelf: "start" }}>
+            {busy ?? (sub ? "Reenviar" : "Enviar missão")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Exemplares de pares (spec 17.2) ----------
+function ExemplaresSection({ courseId, childId }: { courseId: string; childId: string }) {
+  const [exemplars, setExemplars] = useState<Exemplar[]>([]);
+  useEffect(() => { api.courseExemplars(courseId, childId).then((r) => setExemplars(r.exemplars)).catch(() => setExemplars([])); }, [courseId, childId]);
+  if (exemplars.length === 0) return null;
+  return (
+    <section className="bm-card" style={{ marginTop: "1rem", display: "grid", gap: ".6rem" }}>
+      <div className="bm-eyebrow">🌟 Exemplos de colegas</div>
+      {exemplars.map((e) => (
+        <div key={e.id} className="bm-card-flat" style={{ padding: ".65rem .85rem", display: "grid", gap: ".3rem" }}>
+          <div style={{ fontWeight: 620, fontSize: ".9rem" }}>{e.student}</div>
+          {e.note && <div className="bm-meta">{e.note}</div>}
+          {e.body_text && <div style={{ fontSize: ".88rem", whiteSpace: "pre-wrap" }}>{e.body_text}</div>}
+        </div>
+      ))}
+    </section>
   );
 }

@@ -1,5 +1,47 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-09 — P5 completo (P5b gap + P5c ENTREGUE, spec 17) + P5-r parcial (paywall manual, correlação)
+
+- **Objetivo da sessão:** fechar o backlog P5 inteiro e avançar P5-r/P6 até onde código sozinho resolve —
+  sem fingir que dados reais, credenciais externas (Stripe/Pix, SMTP) ou decisões de negócio do owner
+  (D90, custo de infra) já existem. Ver `11-roadmap.md` para o que ficou explicitamente fora e por quê.
+- **Migração v8 aditiva** (`server/db.ts`): `course_groups`, `checklist_state`, `peer_exemplars`,
+  `submission_self_assessments`, `mission_submissions`, `mission_reviews` + `enrollments.group_id` +
+  `parents.founding_member_at` + rebuild aditivo de `content_items.kind` (+`quick_update`,+`mission`) e
+  `consents.scope` (+`media_recording`) — mesma técnica de rebuild usada na v5. Testado em DB fresco (seed
+  v0→v8 num `tsx server/scripts/seed.ts` limpo) e em runtime real (boot do servidor + `/api/health` +
+  endpoint autenticado 401 correto).
+- **P5b gap fechado — Grupos dentro do curso** (spec 16.6, `server/routes/groups.ts`): turmas paralelas
+  compartilhando um só conteúdo; aba "Grupos" em `AdminGestao.tsx`.
+- **P5c ENTREGUE (spec 17 novo)**:
+  - **Quick Updates + Checklists** (`quickupdates.ts`): micro-lição + 1 pergunta opcional + passos
+    rastreáveis; conclusão reaproveita `POST /learn/items/:id/progress`. Autoria em `AdminCurso.tsx`.
+  - **Exemplares de pares** (`exemplars.ts`): promoção pelo professor → pendente → consentimento do
+    responsável (Configurações) → visível só depois de `granted`, nunca automático.
+  - **Auto-avaliação vs professor** (`selfassess.ts` + `lib/rubric.ts` reusado): aluno se autoavalia com a
+    mesma rubrica; gap view por curso (`GET .../self-assessment-gap`) para o professor.
+  - **Readiness 2.0** (`lib/readiness.ts` puro + `readiness.ts`): rollup 40/30/30 conhecimento (FSRS,
+    reusa `readinessForCodes` de 06) + habilidade (rubricas) + execução (provas); dimensão sem dado
+    redistribui peso em vez de zerar.
+  - **Missions-lite** (`missions.ts` + `lib/missions.ts`): grava áudio/vídeo, **IA pré-analisa a
+    transcrição digitada pelo aluno** (honesto: sem ASR configurado, nenhuma transcrição automática de fala
+    neste produto). Escopo LGPD dedicado — novo `ConsentScope='media_recording'` (opt-in em Configurações,
+    NUNCA no onboarding geral), retenção de 180 dias com poda automática no nightly
+    (`pruneExpiredMissions`, chamado de `runNightly`), revisão só pelo professor (`AdminMissoes.tsx`).
+- **P5-r parcial** (`paywall.ts`, `correlation.ts` + `lib/correlation.ts`): founding-member paywall com
+  **link de pagamento manual** (Pix/Stripe — sem gateway integrado, sem credencial no `.env`; o owner cola o
+  link + marca founding members por e-mail depois de confirmar o pagamento fora do sistema — exatamente o
+  "manual" que o roadmap sempre previu) + correlação pós-prova (Pearson, prontidão FSRS atual × nota real,
+  limitação de MVP documentada no spec 17 e na UI).
+- **P6 não iniciado, deliberadamente**: WebSockets/CDN de vídeo/ENEM/B2B seguem gated pela métrica D90 —
+  não há usuários reais neste ambiente para justificar o risco de regressão de migrar o polling testado de
+  P4b/c, e os demais itens são conteúdo/vendas, não engenharia.
+- Verificado: `tsc --noEmit`/`vite build` verdes, **103 testes vitest** (+23 novos em `tests/engajamento.test.ts`
+  — grupos, quick updates, exemplares, gap de autoavaliação, rollup de readiness, poda de missions,
+  consentimento `media_recording`, paywall, correlação de Pearson). Smoke test real: seed limpo v0→v8,
+  boot do servidor, `/api/health` ok, endpoint público real retornando dados, endpoint autenticado 401
+  correto. Guardrails (05)/LGPD (09) inalterados; LGPD estendida com o escopo dedicado de Missions.
+
 ## 2026-07-09 — P5b ENTREGUE (spec 16): gestão & automação — UI completa sobre o backend
 
 - **Frontend das 5 features do P5b** (o backend + testes já existiam desde o commit anterior; faltava a UI):

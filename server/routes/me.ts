@@ -187,7 +187,7 @@ app.post("/api/children", requireParent, async (c) => {
 
   // Gate LGPD: os consentimentos obrigatórios devem vir concedidos (spec 03 §3.3).
   for (const s of REQUIRED_CONSENTS) {
-    if (!body.consents[s]) throw forbidden("consent_required", "É necessário conceder os consentimentos obrigatórios.");
+    if (!body.consents[s as keyof typeof body.consents]) throw forbidden("consent_required", "É necessário conceder os consentimentos obrigatórios.");
   }
 
   if (body.institution_id) {

@@ -26,6 +26,14 @@ import bankRoutes from "./bank.ts";
 import assignmentRoutes from "./assignments.ts";
 import gradesRoutes from "./grades.ts";
 import timelineRoutes from "./timeline.ts";
+import groupsRoutes from "./groups.ts";
+import quickUpdateRoutes from "./quickupdates.ts";
+import exemplarRoutes from "./exemplars.ts";
+import selfAssessRoutes from "./selfassess.ts";
+import readinessRoutes from "./readiness.ts";
+import missionRoutes from "./missions.ts";
+import paywallRoutes from "./paywall.ts";
+import correlationRoutes from "./correlation.ts";
 
 // Registro central de rotas. Cada spec adiciona seu módulo aqui.
 export function mountRoutes(app: Hono<AppEnv>) {
@@ -63,4 +71,12 @@ export function mountRoutes(app: Hono<AppEnv>) {
   app.route("/", assignmentRoutes);
   app.route("/", gradesRoutes);
   app.route("/", timelineRoutes);
+  app.route("/", groupsRoutes);
+  app.route("/", quickUpdateRoutes);
+  app.route("/", exemplarRoutes);
+  app.route("/", selfAssessRoutes);
+  app.route("/", readinessRoutes);
+  app.route("/", missionRoutes);
+  app.route("/", paywallRoutes);
+  app.route("/", correlationRoutes);
 }

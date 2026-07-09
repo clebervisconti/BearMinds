@@ -650,10 +650,89 @@ CREATE TABLE IF NOT EXISTS enrollment_rules (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_enrules_lookup ON enrollment_rules(institution_id, grade, class_id);
+
+-- ===== GRUPOS DENTRO DO CURSO v8 (spec 16.6 — turmas paralelas com um só conteúdo) =====
+CREATE TABLE IF NOT EXISTS course_groups (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_groups_course ON course_groups(course_id);
+
+-- ===== ENGAJAMENTO & PRÁTICA v8 (spec 17 — P5c) =====
+
+-- 17.1 Quick Updates + Checklists: 'quick_update' é um novo kind de content_items (ver rebuild abaixo).
+CREATE TABLE IF NOT EXISTS checklist_state (
+  item_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  step_index INTEGER NOT NULL,
+  done_at TEXT NOT NULL,
+  PRIMARY KEY (item_id, child_id, step_index)
+);
+
+-- 17.2 Exemplares de pares: professor promove submissão a conteúdo de estudo, com consentimento do responsável.
+CREATE TABLE IF NOT EXISTS peer_exemplars (
+  id TEXT PRIMARY KEY,
+  submission_id TEXT NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  promoted_by TEXT NOT NULL,
+  note TEXT,
+  consent_state TEXT DEFAULT 'pending' CHECK(consent_state IN ('pending','granted','denied')),
+  consent_at TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(submission_id)
+);
+CREATE INDEX IF NOT EXISTS idx_exemplars_course ON peer_exemplars(course_id, consent_state);
+
+-- 17.3 Auto-avaliação vs avaliação do professor (gap de metacognição).
+CREATE TABLE IF NOT EXISTS submission_self_assessments (
+  id TEXT PRIMARY KEY,
+  submission_id TEXT NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+  child_id TEXT NOT NULL,
+  rubric_scores_json TEXT,
+  points REAL,
+  reflection TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(submission_id)
+);
+
+-- 17.5 Missions-lite: gravação de áudio/vídeo + pré-análise IA + rubrica do professor.
+-- Escopo LGPD dedicado: consentimento próprio de mídia (scope 'media_recording'), nunca pública,
+-- revisão só professor, retenção limitada (retention_until, poda no nightly).
+CREATE TABLE IF NOT EXISTS mission_submissions (
+  id TEXT PRIMARY KEY,
+  item_id TEXT NOT NULL,
+  child_id TEXT NOT NULL,
+  file_id TEXT NOT NULL,
+  transcript TEXT,
+  ai_preanalysis_json TEXT,
+  status TEXT DEFAULT 'submitted' CHECK(status IN ('submitted','reviewed')),
+  consent_at TEXT NOT NULL,
+  retention_until TEXT NOT NULL,
+  submitted_at TEXT NOT NULL,
+  UNIQUE(item_id, child_id)
+);
+CREATE TABLE IF NOT EXISTS mission_reviews (
+  id TEXT PRIMARY KEY,
+  mission_submission_id TEXT NOT NULL REFERENCES mission_submissions(id) ON DELETE CASCADE,
+  reviewer_parent_id TEXT NOT NULL,
+  rubric_scores_json TEXT,
+  points REAL,
+  feedback TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_missions_item ON mission_submissions(item_id);
+CREATE INDEX IF NOT EXISTS idx_missions_retention ON mission_submissions(retention_until);
+
+-- ===== P5-r: founding-member paywall (link manual) =====
+-- app_settings guarda 'founding_member_link' / 'founding_member_price_label'. Marcação manual do
+-- owner (após confirmar pagamento fora do sistema) fica em parents.founding_member_at (ver ensureColumns).
 `;
 
 // ---- Migrações versionadas (aditivas). Bump SCHEMA_VERSION ao adicionar. ----
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 let initialized = false;
 
 function ensureColumns(table: string, defs: Record<string, string>): void {
@@ -714,6 +793,61 @@ export function initDb(): void {
         CREATE INDEX IF NOT EXISTS idx_items_module ON content_items(module_id, display_order);
       `);
       db.pragma("foreign_keys = ON");
+    }
+  }
+  if (version < 8) {
+    // v8 (spec 16.6 + spec 17 — P5c/P5-r): grupos de curso, quick updates, exemplares de pares,
+    // auto-avaliação, missions-lite, paywall de founding member.
+    ensureColumns("enrollments", { group_id: "TEXT" });
+    ensureColumns("parents", { founding_member_at: "TEXT" });
+
+    // 'quick_update' e 'mission' como novos kinds de content_items (spec 17.1/17.5) — rebuild do CHECK.
+    const ciSql = (db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='content_items'").get() as { sql: string } | undefined)?.sql ?? "";
+    if (!ciSql.includes("'quick_update'")) {
+      db.pragma("foreign_keys = OFF");
+      db.exec(`
+        CREATE TABLE content_items_new (
+          id TEXT PRIMARY KEY,
+          module_id TEXT NOT NULL REFERENCES course_modules(id),
+          kind TEXT NOT NULL CHECK(kind IN ('video','document','lesson','quiz','game','live','assignment','quick_update','mission')),
+          title TEXT NOT NULL,
+          payload_json TEXT,
+          source_file_id TEXT,
+          display_order INTEGER DEFAULT 0,
+          duration_min INTEGER,
+          status TEXT DEFAULT 'draft' CHECK(status IN ('draft','pending_review','published')),
+          verified_by TEXT, verified_at TEXT,
+          created_at TEXT NOT NULL,
+          availability_json TEXT
+        );
+        INSERT INTO content_items_new (id,module_id,kind,title,payload_json,source_file_id,display_order,duration_min,status,verified_by,verified_at,created_at,availability_json)
+          SELECT id,module_id,kind,title,payload_json,source_file_id,display_order,duration_min,status,verified_by,verified_at,created_at,availability_json FROM content_items;
+        DROP TABLE content_items;
+        ALTER TABLE content_items_new RENAME TO content_items;
+        CREATE INDEX IF NOT EXISTS idx_items_module ON content_items(module_id, display_order);
+      `);
+      db.pragma("foreign_keys = ON");
+    }
+
+    // 'media_recording' como novo scope de consentimento (spec 17.5) — rebuild do CHECK.
+    const consSql = (db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='consents'").get() as { sql: string } | undefined)?.sql ?? "";
+    if (!consSql.includes("'media_recording'")) {
+      db.exec(`
+        CREATE TABLE consents_new (
+          id TEXT PRIMARY KEY,
+          parent_id TEXT NOT NULL,
+          child_id TEXT NOT NULL,
+          scope TEXT NOT NULL CHECK(scope IN ('account','ai_generation','progress_tracking','email_updates','media_recording')),
+          granted INTEGER NOT NULL,
+          policy_version TEXT NOT NULL,
+          granted_at TEXT NOT NULL,
+          revoked_at TEXT
+        );
+        INSERT INTO consents_new SELECT * FROM consents;
+        DROP TABLE consents;
+        ALTER TABLE consents_new RENAME TO consents;
+        CREATE INDEX IF NOT EXISTS idx_consents_lookup ON consents(parent_id, child_id, scope);
+      `);
     }
   }
   if (version < SCHEMA_VERSION) db.pragma(`user_version = ${SCHEMA_VERSION}`);

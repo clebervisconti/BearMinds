@@ -14,6 +14,8 @@ const KIND_META: Record<string, { icon: string; label: string }> = {
   game: { icon: "🎮", label: "Jogo" },
   live: { icon: "📡", label: "Ao vivo" },
   assignment: { icon: "📝", label: "Tarefa" },
+  quick_update: { icon: "⚡", label: "Quick Update" },
+  mission: { icon: "🎙️", label: "Mission" },
 };
 
 export function AdminCurso() {
@@ -190,7 +192,7 @@ function ItemRow({ item, courseId, prevItemId, onChanged, onPreview, previewOpen
             <button className="bm-btn bm-btn-sm" onClick={() => run(() => api.adminApproveItem(item.id))}>✓ Aprovar e publicar</button>
           </>
         )}
-        {item.status === "draft" && (item.kind === "video" || item.kind === "document" || item.kind === "assignment") && (
+        {item.status === "draft" && (item.kind === "video" || item.kind === "document" || item.kind === "assignment" || item.kind === "quick_update" || item.kind === "mission") && (
           <button className="bm-btn bm-btn-sm" onClick={() => run(() => api.adminApproveItem(item.id))}>Publicar</button>
         )}
         {canLive && (
@@ -198,6 +200,9 @@ function ItemRow({ item, courseId, prevItemId, onChanged, onPreview, previewOpen
         )}
         {item.kind === "assignment" && (
           <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${courseId}/item/${item.id}/entregas`)}>📥 Entregas</button>
+        )}
+        {item.kind === "mission" && (
+          <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${courseId}/item/${item.id}/missoes`)}>🎙️ Missões</button>
         )}
         {prevItemId && (
           <button className="bm-btn-quiet bm-btn-sm" title="Desbloquear só após concluir o item anterior" onClick={toggleLock}>{locked ? "🔒 bloqueado" : "🔓 livre"}</button>
@@ -257,7 +262,7 @@ function ItemPreview({ itemId }: { itemId: string }) {
 
 // ---------- adicionar item ----------
 function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void }) {
-  const [kind, setKind] = useState<"video" | "document" | "lesson" | "assignment">("lesson");
+  const [kind, setKind] = useState<"video" | "document" | "lesson" | "assignment" | "quick_update" | "mission">("lesson");
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [text, setText] = useState("");
@@ -266,6 +271,15 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
   const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Quick Update (spec 17.1)
+  const [quBody, setQuBody] = useState("");
+  const [quQuestion, setQuQuestion] = useState("");
+  const [quOptions, setQuOptions] = useState(["", ""]);
+  const [quCorrect, setQuCorrect] = useState(0);
+  const [quChecklist, setQuChecklist] = useState("");
+  // Mission (spec 17.5)
+  const [missionPrompt, setMissionPrompt] = useState("");
+  const [missionMedia, setMissionMedia] = useState<"audio" | "video">("audio");
 
   async function save() {
     setErr(null);
@@ -282,6 +296,14 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
       }
       if (kind === "video" && videoUrl.trim()) payload = { url: videoUrl.trim() };
       if (kind === "assignment") payload = { instructions: instructions.trim(), accept: ["text", "file"], max_points: maxPoints };
+      if (kind === "quick_update") {
+        const questions = quQuestion.trim() && quOptions.filter((o) => o.trim()).length >= 2
+          ? [{ prompt: quQuestion.trim(), options: quOptions.filter((o) => o.trim()), correct: quCorrect }]
+          : [];
+        const checklist = quChecklist.split("\n").map((l) => l.trim()).filter(Boolean).map((label) => ({ label }));
+        payload = { body: quBody.trim(), questions, checklist };
+      }
+      if (kind === "mission") payload = { prompt: missionPrompt.trim(), media_type: missionMedia, max_points: maxPoints };
 
       setBusy("Criando item…");
       const item = await api.adminCreateItem(moduleId, { kind, title: title.trim(), payload, source_file_id: sourceFileId });
@@ -305,12 +327,14 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
     (kind === "video" && !videoUrl.trim() && !file) ||
     (kind === "document" && !file) ||
     (kind === "assignment" && instructions.trim().length < 5) ||
+    (kind === "quick_update" && quBody.trim().length < 5) ||
+    (kind === "mission" && missionPrompt.trim().length < 5) ||
     needsSource;
 
   return (
     <div className="bm-card-flat" style={{ padding: ".9rem", display: "grid", gap: ".6rem", background: "var(--bm-surface-2)" }}>
       <div style={{ display: "flex", gap: ".4rem", flexWrap: "wrap" }}>
-        {(["lesson", "video", "document", "assignment"] as const).map((k) => (
+        {(["lesson", "video", "document", "assignment", "quick_update", "mission"] as const).map((k) => (
           <button key={k} className={`bm-btn-sm ${kind === k ? "bm-btn" : "bm-btn bm-btn-ghost"}`} onClick={() => setKind(k)}>
             {KIND_META[k].icon} {k === "lesson" ? "Lição + Quiz (IA)" : KIND_META[k].label}
           </button>
@@ -349,6 +373,42 @@ function AddItem({ moduleId, onDone }: { moduleId: string; onDone: () => void })
           <textarea className="bm-input" rows={4} placeholder="Instruções da tarefa para o aluno…" value={instructions} onChange={(e) => setInstructions(e.target.value)} style={{ resize: "vertical" }} />
           <label className="bm-meta">Pontuação máxima: <input className="bm-input" type="number" min={1} max={1000} value={maxPoints} onChange={(e) => setMaxPoints(Number(e.target.value))} style={{ width: 100, display: "inline-block" }} /></label>
           <div className="bm-meta">O aluno entrega texto e/ou arquivo. Você corrige em <b>Entregas</b> (com rubrica e pré-análise de IA).</div>
+        </>
+      )}
+
+      {kind === "quick_update" && (
+        <>
+          <div className="bm-meta">Micro-lição de ~3 min: um texto curto, 1 pergunta opcional e uma checklist de passos rastreáveis.</div>
+          <textarea className="bm-input" rows={3} placeholder="Texto curto do Quick Update…" value={quBody} onChange={(e) => setQuBody(e.target.value)} style={{ resize: "vertical" }} />
+          <input className="bm-input" placeholder="Pergunta (opcional)" value={quQuestion} onChange={(e) => setQuQuestion(e.target.value)} />
+          {quQuestion.trim() && (
+            <div style={{ display: "grid", gap: ".3rem" }}>
+              {quOptions.map((o, i) => (
+                <div key={i} style={{ display: "flex", gap: ".4rem", alignItems: "center" }}>
+                  <input type="radio" checked={quCorrect === i} onChange={() => setQuCorrect(i)} />
+                  <input className="bm-input" placeholder={`Opção ${i + 1}`} value={o} onChange={(e) => setQuOptions((opts) => opts.map((x, xi) => xi === i ? e.target.value : x))} />
+                </div>
+              ))}
+              <button className="bm-btn-quiet bm-btn-sm" onClick={() => setQuOptions((o) => [...o, ""])} style={{ justifySelf: "start" }}>+ opção</button>
+            </div>
+          )}
+          <textarea className="bm-input" rows={3} placeholder={"Checklist — um passo por linha (opcional)"} value={quChecklist} onChange={(e) => setQuChecklist(e.target.value)} style={{ resize: "vertical" }} />
+        </>
+      )}
+
+      {kind === "mission" && (
+        <>
+          <div className="bm-meta">
+            O aluno grava áudio ou vídeo e digita uma transcrição/resumo (este produto não faz transcrição automática).
+            A IA pré-analisa o texto digitado; você avalia por rubrica ouvindo/assistindo o arquivo.
+          </div>
+          <textarea className="bm-input" rows={3} placeholder="Pedido da missão (ex.: 'Explique com suas palavras o que é uma fração equivalente')…" value={missionPrompt} onChange={(e) => setMissionPrompt(e.target.value)} style={{ resize: "vertical" }} />
+          <div style={{ display: "flex", gap: ".4rem" }}>
+            {(["audio", "video"] as const).map((m) => (
+              <button key={m} className={`bm-btn-sm ${missionMedia === m ? "bm-btn" : "bm-btn bm-btn-ghost"}`} onClick={() => setMissionMedia(m)}>{m === "audio" ? "🎙️ Áudio" : "🎬 Vídeo"}</button>
+            ))}
+          </div>
+          <label className="bm-meta">Pontuação máxima: <input className="bm-input" type="number" min={1} max={1000} value={maxPoints} onChange={(e) => setMaxPoints(Number(e.target.value))} style={{ width: 100, display: "inline-block" }} /></label>
         </>
       )}
 

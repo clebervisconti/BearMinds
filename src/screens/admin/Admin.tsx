@@ -80,6 +80,7 @@ export function Admin() {
       )}
 
       {role === "platform_admin" && <AiModelCard />}
+      {role === "platform_admin" && <PaywallCard />}
 
       {creating && (
         <CreateCourse
@@ -178,6 +179,81 @@ function AiModelCard() {
             );
           })}
           <p className="bm-meta" style={{ margin: 0 }}>Só modelos com provedor configurado aparecem. O padrão é o Gemma local (privado, sem custo de API).</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Founding-member paywall (P5-r, roadmap 11): link de pagamento MANUAL (Pix/Stripe) — sem gateway
+// integrado. O owner cola o link + preço aqui; a marcação de founding member é manual, por e-mail,
+// depois de confirmar o pagamento fora do sistema.
+function PaywallCard() {
+  const [data, setData] = useState<{ link: string | null; price_label: string | null; founding_members_count: number } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [link, setLink] = useState("");
+  const [priceLabel, setPriceLabel] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = () => api.paywallAdmin().then((d) => { setData(d); setLink(d.link ?? ""); setPriceLabel(d.price_label ?? ""); }).catch((e) => setErr(e instanceof ApiError ? e.message : "Erro."));
+  useEffect(() => { void load(); }, []);
+
+  async function save() {
+    setBusy(true); setErr(null); setMsg(null);
+    try { await api.paywallSet(link.trim(), priceLabel.trim()); await load(); setMsg("Link salvo."); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Erro ao salvar."); }
+    finally { setBusy(false); }
+  }
+  async function markFounding(granted: boolean) {
+    if (!email.trim()) return;
+    setBusy(true); setErr(null); setMsg(null);
+    try { await api.paywallMarkByEmail(email.trim(), granted); setEmail(""); await load(); setMsg(granted ? "Marcado como founding member." : "Removido de founding member."); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Erro."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="bm-card" style={{ marginBottom: "1rem", display: "grid", gap: ".5rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
+        <span aria-hidden style={{ fontSize: "1.2rem" }}>💳</span>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ fontWeight: 650 }}>Founding member (paywall manual)</div>
+          <div className="bm-meta">
+            {data?.link ? <>Link ativo · {data.price_label} · {data.founding_members_count} membro(s)</> : "Sem link configurado ainda."}
+          </div>
+        </div>
+        <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => setOpen((v) => !v)}>{open ? "Fechar" : "Configurar"}</button>
+      </div>
+      {err && <ErrorNote>{err}</ErrorNote>}
+      {msg && <div className="bm-meta" style={{ color: "var(--bm-success)" }}>{msg}</div>}
+      {open && (
+        <div style={{ display: "grid", gap: ".6rem" }}>
+          <div className="bm-meta">
+            Sem integração de gateway — cole aqui um link de pagamento avulso (Pix ou Stripe Payment Link).
+            Após confirmar o pagamento FORA do sistema, marque o e-mail do responsável abaixo.
+          </div>
+          <label style={{ display: "grid", gap: ".2rem" }}>
+            <span className="bm-meta">Link de pagamento</span>
+            <input className="bm-input" placeholder="https://…" value={link} onChange={(e) => setLink(e.target.value)} />
+          </label>
+          <label style={{ display: "grid", gap: ".2rem" }}>
+            <span className="bm-meta">Preço (rótulo exibido)</span>
+            <input className="bm-input" placeholder="ex.: R$ 197/ano" value={priceLabel} maxLength={80} onChange={(e) => setPriceLabel(e.target.value)} />
+          </label>
+          <button className="bm-btn bm-btn-sm" disabled={busy || !link.trim() || !priceLabel.trim()} onClick={save} style={{ justifySelf: "start" }}>Salvar link</button>
+
+          <hr className="bm-divider" />
+          <label style={{ display: "grid", gap: ".2rem" }}>
+            <span className="bm-meta">Marcar founding member por e-mail</span>
+            <div style={{ display: "flex", gap: ".4rem" }}>
+              <input className="bm-input" type="email" placeholder="email@familia.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <button className="bm-btn bm-btn-sm" disabled={busy || !email.trim()} onClick={() => markFounding(true)}>Marcar</button>
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" disabled={busy || !email.trim()} onClick={() => markFounding(false)}>Remover</button>
+            </div>
+          </label>
         </div>
       )}
     </div>

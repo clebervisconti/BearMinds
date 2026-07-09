@@ -1,7 +1,9 @@
 import type { AgeBand, ConsentScope } from "../../shared/contracts.ts";
 
 export const REQUIRED_CONSENTS: ConsentScope[] = ["account", "ai_generation", "progress_tracking"];
-export const ALL_CONSENTS: ConsentScope[] = [...REQUIRED_CONSENTS, "email_updates"];
+// media_recording (spec 17.5) NÃO é onboarding-wide: concedido sob demanda em Configurações, só quando
+// o estudante for usar Missions-lite (escopo LGPD dedicado — nunca bundlado no consentimento geral).
+export const ALL_CONSENTS: ConsentScope[] = [...REQUIRED_CONSENTS, "email_updates", "media_recording"];
 export const MAX_CHILDREN = 5; // total de perfis por conta (1 'self' + filhos) — spec 12
 export const MIN_AGE = 6; // faixa-alvo 6–19 (spec 12; supersede spec 03 §3.4)
 export const MAX_AGE = 19;

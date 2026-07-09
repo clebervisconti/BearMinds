@@ -4,7 +4,7 @@
 export type AgeBand = "8-10" | "11-14" | "15-18";
 export type Lang = "pt" | "en";
 export type ArtifactKind = "lesson" | "explorable" | "quiz";
-export type ConsentScope = "account" | "ai_generation" | "progress_tracking" | "email_updates";
+export type ConsentScope = "account" | "ai_generation" | "progress_tracking" | "email_updates" | "media_recording";
 
 // ---------- Artefatos gerados ----------
 export interface LessonSection {

@@ -1,12 +1,12 @@
 // Configurações (spec 12.2) — absorve o antigo painel do responsável: conta, perfis,
 // consentimentos, visibilidade no ranking, exportar/excluir dados, sair.
 // Gate do responsável (senha + desafio) continua quando o perfil ativo é child.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "../components/AppShell";
 import { BearLoader, ErrorNote } from "../components/common";
-import { api, ApiError, EXPORT_URL } from "../lib/api";
+import { api, ApiError, EXPORT_URL, type PendingExemplar } from "../lib/api";
 import { useMe, useLogout, activeChild } from "../lib/queries";
 import { useUI } from "../lib/store";
 import type { ConsentScope } from "../../shared/contracts";
@@ -16,6 +16,7 @@ const CONSENT_LABEL: Record<ConsentScope, string> = {
   ai_generation: "Gerar conteúdo com IA",
   progress_tracking: "Acompanhar progresso (revisões)",
   email_updates: "Resumo por e-mail",
+  media_recording: "Gravação de áudio/vídeo (Missions)",
 };
 
 export function Configuracoes() {
@@ -157,6 +158,9 @@ function SettingsBody() {
         </label>
       </section>
 
+      <ExemplarApprovals />
+      <FoundingMemberSection />
+
       <section className="bm-card" style={{ display: "grid", gap: ".6rem" }}>
         <h2 style={{ marginTop: 0, fontSize: "1rem" }}>Seus dados (LGPD)</h2>
         <a className="bm-btn bm-btn-ghost" href={EXPORT_URL} download style={{ textDecoration: "none" }}>Exportar meus dados (JSON)</a>
@@ -164,5 +168,55 @@ function SettingsBody() {
         <button className="bm-btn bm-btn-ghost" onClick={() => logout.mutate(undefined, { onSuccess: () => nav("/entrar") })}>Sair da conta</button>
       </section>
     </div>
+  );
+}
+
+// Exemplares de pares (spec 17.2) — o responsável autoriza (ou não) promover a tarefa do filho a exemplo de estudo.
+function ExemplarApprovals() {
+  const [pending, setPending] = useState<PendingExemplar[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = () => api.pendingExemplars().then((r) => setPending(r.pending)).catch(() => setPending([]));
+  useEffect(() => { void load(); }, []);
+
+  async function respond(id: string, granted: boolean) {
+    setErr(null);
+    try { await api.consentExemplar(id, granted); load(); }
+    catch (e) { setErr(e instanceof ApiError ? e.message : "Erro."); }
+  }
+
+  if (!pending || pending.length === 0) return null;
+  return (
+    <section className="bm-card" style={{ display: "grid", gap: ".6rem" }}>
+      <h2 style={{ marginTop: 0, fontSize: "1rem" }}>🌟 Tarefas propostas como exemplo</h2>
+      <p className="bm-meta" style={{ margin: 0 }}>
+        O professor quer usar a tarefa abaixo como exemplo de estudo para os colegas de turma. Sua autorização é necessária antes de ficar visível.
+      </p>
+      {err && <ErrorNote>{err}</ErrorNote>}
+      {pending.map((p) => (
+        <div key={p.id} className="bm-card-flat" style={{ padding: ".7rem .9rem", display: "grid", gap: ".4rem" }}>
+          <div style={{ fontWeight: 620, fontSize: ".92rem" }}>{p.student} · {p.course_title}</div>
+          {p.note && <div className="bm-meta">{p.note}</div>}
+          <div style={{ display: "flex", gap: ".5rem" }}>
+            <button className="bm-btn bm-btn-sm" onClick={() => respond(p.id, true)}>Autorizar</button>
+            <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => respond(p.id, false)}>Recusar</button>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// Founding member (P5-r): link de pagamento manual (Pix/Stripe) — sem gateway integrado no produto.
+function FoundingMemberSection() {
+  const [data, setData] = useState<{ link: string | null; price_label: string | null; is_founding_member: boolean } | null>(null);
+  useEffect(() => { api.paywall().then(setData).catch(() => setData(null)); }, []);
+  if (!data || !data.link || data.is_founding_member) return null;
+  return (
+    <section className="bm-card" style={{ display: "grid", gap: ".5rem", background: "color-mix(in srgb, var(--bm-primary) 6%, transparent)" }}>
+      <h2 style={{ marginTop: 0, fontSize: "1rem" }}>⭐ Torne-se founding member</h2>
+      <p className="bm-meta" style={{ margin: 0 }}>Apoie o BearMinds desde o início · {data.price_label}</p>
+      <a className="bm-btn bm-btn-sm" href={data.link} target="_blank" rel="noreferrer" style={{ textDecoration: "none", justifySelf: "start" }}>Quero apoiar</a>
+    </section>
   );
 }
