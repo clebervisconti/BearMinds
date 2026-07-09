@@ -68,6 +68,22 @@ export function useCommunityPosts(childId: string | null, subject?: string) {
   });
 }
 
+export function useTimeline(childId: string | null) {
+  return useQuery({
+    queryKey: ["timeline", childId],
+    queryFn: () => api.myTimeline(childId!),
+    enabled: !!childId,
+  });
+}
+
+export function useMyGrades(childId: string | null) {
+  return useQuery({
+    queryKey: ["my-grades", childId],
+    queryFn: () => api.myGrades(childId!),
+    enabled: !!childId,
+  });
+}
+
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({

@@ -3,7 +3,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { BearLoader, Progress } from "../components/common";
-import { useMe, useToday, useCoins, useParentSummary, useInstitutions, activeChild } from "../lib/queries";
+import { useMe, useToday, useCoins, useParentSummary, useInstitutions, useTimeline, useMyGrades, activeChild } from "../lib/queries";
+import type { TimelineItem, GradeCourse } from "../lib/api";
 
 const BADGE_LABEL: Record<string, string> = {
   first_lesson: "Primeira missão",
@@ -22,6 +23,8 @@ export function Dashboard() {
   const today = useToday(child?.id ?? null);
   const coins = useCoins(child?.id ?? null);
   const summary = useParentSummary(child?.id ?? null);
+  const timeline = useTimeline(child?.id ?? null);
+  const grades = useMyGrades(child?.id ?? null);
 
   if (me.isLoading || (child && today.isLoading)) {
     return <AppShell><BearLoader label="Carregando…" /></AppShell>;
@@ -114,6 +117,8 @@ export function Dashboard() {
               <Link to="/atividades" style={{ fontSize: ".88rem", fontWeight: 600, textDecoration: "none" }}>Ver todas as atividades →</Link>
             </div>
           </section>
+
+          <TimelineSection items={timeline.data?.timeline ?? []} onOpenExam={(examId) => nav(`/prova/${examId}`)} onOpenCourse={(cid) => nav(`/curso/${cid}`)} />
         </div>
 
         {/* ================= trilho direito ================= */}
@@ -147,6 +152,8 @@ export function Dashboard() {
             </div>
           </div>
 
+          <GradesCard courses={grades.data?.courses ?? []} />
+
           {badges.length > 0 && (
             <div className="bm-card-flat" style={{ padding: "1rem 1.1rem" }}>
               <div className="bm-eyebrow" style={{ marginBottom: ".55rem" }}>Conquistas recentes</div>
@@ -172,6 +179,76 @@ export function Dashboard() {
         @media(min-width:920px){.bm-dash{grid-template-columns:minmax(0,1fr) 320px;gap:1.4rem}}
       `}</style>
     </AppShell>
+  );
+}
+
+// Cronograma / prazos (spec 16.4) — tarefas e provas com due_at, já filtradas no backend.
+function TimelineSection({ items, onOpenExam, onOpenCourse }: {
+  items: TimelineItem[]; onOpenExam: (examId: string) => void; onOpenCourse: (courseId: string) => void;
+}) {
+  if (items.length === 0) return null;
+  const now = Date.now();
+  return (
+    <section>
+      <div className="bm-eyebrow" style={{ margin: "1.4rem 0 .6rem" }}>O que vence em seguida ({items.length})</div>
+      <div style={{ display: "grid", gap: ".6rem" }}>
+        {items.slice(0, 6).map((it) => {
+          const due = new Date(it.due_at);
+          const daysLeft = Math.ceil((due.getTime() - now) / 86400000);
+          const overdue = daysLeft < 0;
+          const clickable = it.available;
+          const go = () => it.kind === "exam" ? onOpenExam(it.id) : onOpenCourse(it.course_id);
+          return (
+            <button
+              key={`${it.kind}-${it.id}`}
+              className="bm-row"
+              onClick={clickable ? go : undefined}
+              style={{ opacity: clickable ? 1 : 0.7, cursor: clickable ? "pointer" : "default" }}
+            >
+              <span className="thumb" style={{ background: `color-mix(in srgb, var(--bm-${overdue ? "danger" : it.kind === "exam" ? "warn" : "primary"}) 10%, transparent)` }}>
+                {clickable ? (it.kind === "exam" ? "📝" : "🗂") : "🔒"}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 620 }}>{it.title}</div>
+                <div className="bm-meta">
+                  {it.course_title} · {it.kind === "exam" ? "prova" : "tarefa"} ·{" "}
+                  {overdue
+                    ? `venceu ${due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`
+                    : daysLeft === 0 ? "vence hoje" : `em ${daysLeft} dia${daysLeft === 1 ? "" : "s"}`}
+                  {!it.available && it.lock_reason ? ` · 🔒 ${it.lock_reason}` : ""}
+                </div>
+              </div>
+              {clickable && <span style={{ color: "var(--bm-muted)" }}>›</span>}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// Boletim resumido (spec 16.3) — média por curso, visão do estudante.
+function GradesCard({ courses }: { courses: GradeCourse[] }) {
+  const graded = courses.filter((c) => c.average !== null);
+  if (graded.length === 0) return null;
+  return (
+    <div className="bm-card-flat" style={{ padding: "1rem 1.1rem" }}>
+      <div className="bm-eyebrow" style={{ marginBottom: ".55rem" }}>Boletim</div>
+      <div style={{ display: "grid", gap: ".5rem" }}>
+        {graded.map((c) => {
+          const avg = c.average ?? 0;
+          const color = avg >= 0.6 ? "var(--bm-success)" : avg >= 0.4 ? "var(--bm-warn)" : "var(--bm-danger)";
+          return (
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: ".55rem", fontSize: ".88rem" }}>
+              <span aria-hidden>{c.cover_emoji}</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</span>
+              <span style={{ fontWeight: 700, color }}>{Math.round(avg * 100)}%</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="bm-meta" style={{ marginTop: ".5rem" }}>Média das provas e tarefas já avaliadas.</div>
+    </div>
   );
 }
 

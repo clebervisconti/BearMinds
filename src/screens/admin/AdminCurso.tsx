@@ -85,6 +85,7 @@ export function AdminCurso() {
             </div>
             <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
               <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${course.id}/avaliacao`)}>🗃 Avaliação</button>
+              <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${course.id}/gestao`)}>📊 Gestão</button>
               <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => nav(`/admin/curso/${course.id}/interagir`, { state: { title: course.title } })}>💬 Interação</button>
               <button className="bm-btn bm-btn-ghost bm-btn-sm" onClick={() => setAssigning((v) => !v)}>🎓 Matricular alunos</button>
               <button className="bm-btn bm-btn-sm" onClick={togglePublish} style={published ? { background: "var(--bm-warn)" } : {}}>

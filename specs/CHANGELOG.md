@@ -1,5 +1,25 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-09 — P5b ENTREGUE (spec 16): gestão & automação — UI completa sobre o backend
+
+- **Frontend das 5 features do P5b** (o backend + testes já existiam desde o commit anterior; faltava a UI):
+- **Cliente tipado** (`src/lib/api.ts`): `adminGradebook`, `adminCourseReports`, `adminEnrollmentRules`,
+  `adminCreateEnrollmentRule`, `adminDeleteEnrollmentRule`, `adminDuplicateCourse`, `myGrades`, `myTimeline`
+  + tipos `Gradebook`/`CourseReports`/`EnrollmentRule`/`GradeCourse`/`TimelineItem`. Hooks `useTimeline`/`useMyGrades`.
+- **Área de gestão do curso** (`AdminGestao.tsx`, rota `/admin/curso/:id/gestao`, botão "📊 Gestão" no editor):
+  4 abas —
+  1. **Boletim** (16.3): tabela alunos × atividades (provas 📝 + tarefas 🗂) com % por item e média consolidada
+     colorida por faixa; colunas/linhas sticky, scroll horizontal.
+  2. **Relatórios** (16.5): cards de participação 7d, conclusão média, média em provas e em tarefas.
+  3. **Auto-matrícula** (16.1): lista/cria/remove regras (série + turma, em branco = todas); criação restrita a
+     `institution_admin`/`platform_admin` (professor só visualiza).
+  4. **Duplicar** (16.2): clona o curso em rascunho (novo título + turma) e navega ao curso clonado.
+- **Dashboard do estudante**: bloco **"O que vence em seguida"** (16.4 — tarefas/provas com prazo, ordenadas,
+  🔒 quando bloqueado, clique abre prova/curso) + card **"Boletim"** no trilho direito (média por curso, cor por faixa).
+- **Fixes transversais respeitados**: ~5 campos por tela; 1 agregação de nota padrão (média aritmética) com prévia
+  na própria tela; bloqueado = visível com motivo (🔒 + `lock_reason`).
+- Verificado: tsc/build verdes, **80 testes vitest** (inclui os 4 de `gestao.test.ts`). Guardrails (05)/LGPD (09) inalterados.
+
 ## 2026-07-04 — IA migrada do Gemini API para Gemma local (MLX no HULK)
 
 - **Toda a IA do BearMinds** (decompose, resolve, lição, explorável, quiz, math-check, pré-análise de tarefas)
