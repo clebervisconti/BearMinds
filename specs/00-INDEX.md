@@ -35,6 +35,7 @@
 | 16 | [16-gestao-automacao.md](16-gestao-automacao.md) | Auto-matrícula, Duplicação, Boletim, Cronograma, Relatórios | P5b |
 | 17 | [17-engajamento-pratica.md](17-engajamento-pratica.md) | Quick Updates/Checklists, exemplares de pares, autoavaliação, Readiness 2.0, Missions-lite | P5c |
 | 18 | [18-next-gen-vision.md](18-next-gen-vision.md) | **Research & vision** — next-gen features, design standards & UX (evidence 2025–2026); gap analysis + sequencing (proposal, not impl spec) | vision |
+| 19 | [19-next-gen-vision-frontier.md](19-next-gen-vision-frontier.md) | **Research & vision — Frontier II** — deepens spec 18 on 6 fronts: affect/anxiety, voice/multimodal, safe peer learning, teacher AI co-pilot, learning analytics & efficacy dataset, retention lifecycle; new 2025 regulatory frame (EU AI Act emotion ban, Digital ECA) (proposal, not impl spec) | vision |
 
 ## Current state → target state (one screen)
 
