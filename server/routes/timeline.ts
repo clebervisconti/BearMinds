@@ -81,7 +81,10 @@ app.get("/api/my/timeline", requireParent, (c) => {
 
   // 2) Busca provas (exams) dos cursos matriculados
   const exams = db.prepare(
-    `SELECT x.id, x.title, x.due_at, x.availability_json, cs.id AS course_id, cs.title AS course_title
+    // NB: a tabela `exams` NÃO tem coluna `availability_json` (o motor de desbloqueio
+    // da spec 15.5 só cobre content_items/course_modules). Selecionar `x.availability_json`
+    // aqui causava um 500 ("no such column"). Provas não têm árvore de bloqueio → sempre available.
+    `SELECT x.id, x.title, x.due_at, cs.id AS course_id, cs.title AS course_title
      FROM exams x
      JOIN courses cs ON cs.id = x.course_id
      JOIN enrollments e ON e.course_id = cs.id
@@ -90,7 +93,6 @@ app.get("/api/my/timeline", requireParent, (c) => {
     id: string;
     title: string;
     due_at: string | null;
-    availability_json: string | null;
     course_id: string;
     course_title: string;
   }[];
@@ -107,8 +109,7 @@ app.get("/api/my/timeline", requireParent, (c) => {
     const submitted = examSubmittedStmt.get(ex.id, childId) != null;
     if (submitted) continue;
 
-    const availRes = evaluateAvailability(parseCond(ex.availability_json), resolver);
-
+    // Provas não têm motor de desbloqueio → sempre disponíveis.
     examItems.push({
       id: ex.id,
       title: ex.title,
@@ -116,8 +117,8 @@ app.get("/api/my/timeline", requireParent, (c) => {
       due_at: ex.due_at,
       course_id: ex.course_id,
       course_title: ex.course_title,
-      available: availRes.available,
-      lock_reason: availRes.reason,
+      available: true,
+      lock_reason: null,
     });
   }
 

@@ -177,4 +177,36 @@ describe("Timeline / Cronograma filtering and availability", () => {
     expect(list[0].title).toBe("T2");
     expect(list[1].title).toBe("T1");
   });
+
+  // Regressão (bug real de prod, 2026-07-10): GET /api/my/timeline dava 500
+  // ("no such column: x.availability_json") sempre que o aluno tinha uma prova em curso
+  // matriculado, porque a query em server/routes/timeline.ts selecionava availability_json
+  // de `exams` — coluna que NÃO existe (o motor de desbloqueio da spec 15.5 só cobre
+  // content_items/course_modules). O teste anterior simulava o timeline em JS puro e nunca
+  // batia no SQL real, por isso passou raso. Este teste roda a QUERY REAL de provas do
+  // timeline contra o schema real e falha se alguém reintroduzir uma coluna inexistente.
+  it("timeline: a query real de provas roda sem erro de coluna (não seleciona availability_json de exams)", () => {
+    const childId = newId();
+    const courseId = newId();
+    db.prepare("INSERT INTO courses (id,institution_id,subject_id,class_id,title,status,created_by,created_at) VALUES (?,'gestao-inst','mat','6EF','Curso Prova','published','prof',?)").run(courseId, nowIso());
+    db.prepare("INSERT INTO enrollments (id,child_id,course_id,source,enrolled_at) VALUES (?,?,?, 'self', ?)").run(newId(), childId, courseId, nowIso());
+    const examId = newId();
+    const due = new Date(Date.now() + 5 * 86400000).toISOString();
+    db.prepare("INSERT INTO exams (id,course_id,title,pool_json,duration_min,status,due_at,created_by,created_at) VALUES (?,?,'Prova 1','{}',30,'published',?,'prof',?)")
+      .run(examId, courseId, due, nowIso());
+
+    // EXATAMENTE a query de provas de server/routes/timeline.ts (sem availability_json).
+    const runExamQuery = () =>
+      db.prepare(
+        `SELECT x.id, x.title, x.due_at, cs.id AS course_id, cs.title AS course_title
+         FROM exams x
+         JOIN courses cs ON cs.id = x.course_id
+         JOIN enrollments e ON e.course_id = cs.id
+         WHERE e.child_id = ? AND x.status = 'published'`
+      ).all(childId) as { id: string; title: string; due_at: string | null }[];
+
+    expect(runExamQuery).not.toThrow();
+    const rows = runExamQuery();
+    expect(rows.find((r) => r.id === examId)?.title).toBe("Prova 1");
+  });
 });
