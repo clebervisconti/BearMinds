@@ -1,5 +1,34 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-10 — Visão de próxima geração, Fronteira II (spec 19)
+
+- **Novo documento `specs/19-next-gen-vision-frontier.md`** (research/vision, não impl spec): **Parte II do
+  spec 18** — aprofunda seis frentes que o 18 reconheceu mas não detalhou. Continuação da tarefa agendada
+  `bearminds-cd` (mandato permanente de pesquisar features/design/UX de próxima geração para o público-alvo).
+- **Método:** encomendou à CS AI Strategy squad **seis rodadas de pesquisa fresca 2025–2026** (uma por
+  frente), com síntese evidência → construir → fit (guardrail/LGPD/moat) → não-fazer, e curadoria de fontes
+  (preprints arXiv com datas 2026 não-verificáveis foram omitidos em favor de fontes primárias).
+- **As seis frentes:** **(A) afeto/ansiedade/motivação** — mindset é estilo de feedback dirigido (efeito ~0
+  no geral), a tríade erro-como-informação + retrieval de baixo risco + pausa é *idêntica* ao scaffolding
+  anti-cola; 73% dos jovens BR abaixo do nível 2 em Mat. (PISA 2022); afeto por sinal de interação on-device,
+  computa-e-descarta. **(B) voz & multimodal** — decisão técnica: **Whisper on-device (WASM)** porque Web
+  Speech não roda em PWA iOS instalado *e* mandaria áudio de menor a terceiros; "mostre seu trabalho" por
+  foto do próprio passo. **(C) pares seguros** — recomendação: **nada de DM aluno↔aluno**; bandeira
+  **"Ensine o Bear"** (protégé de IA que erra de propósito) + revisão anonimizada do raciocínio + família.
+  **(D) copiloto do professor** — modelo Aila (Oak): RAG-sobre-corpus + semáforo de sign-off + dashboard de
+  equívocos descritivo (não prescritivo); ~5,9 h/sem economizadas; cunha "compliance BNCC na caixa". **(E)
+  analytics & eficácia** — postura **ESSA Tier 4** (modelo lógico público) → dose-resposta rumo a Silver;
+  ECD (Competência/Evidência/Tarefa); formato xAPI interno (Caliper é overkill); DKT "wavy" nunca exposto.
+  **(F) retenção/ciclo de vida** — dois loops (aluno engaja / **pai renova**); novelty cliff ~4 semanas →
+  virar para competência visível; digest = instrumento de renovação; ciclo pelo calendário letivo BR
+  (ENEM 8 e 15/nov); win-back só no canal do pai, sem culpa à criança.
+- **Nova moldura regulatória 2025 (transversal, favorece nosso posicionamento):** EU AI Act proíbe inferência
+  de emoção em educação (fev/2025); Estatuto Digital da Criança e do Adolescente (BR, 17/set/2025) — &lt;12 vs
+  12–18, consentimento parental prévio. Vira adições ao Definition of Done (§19.2) + anti-metas (§19.5).
+- **Encaixe no roadmap:** §19.4 insere cada frente nas ondas já ordenadas pelo 18.7 sem quebrá-las; 3 novas
+  assinaturas somam-se às 6 do 18.6. **Preserva** todos os guardrails (05) e LGPD (09). Registrado no
+  `00-INDEX.md`. Nenhuma mudança de código de app.
+
 ## 2026-07-10 — Visão de próxima geração: pesquisa de features, design & UX (spec 18)
 
 - **Novo documento `specs/18-next-gen-vision.md`** (research/vision, não impl spec): consolida o que
