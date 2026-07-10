@@ -1,0 +1,78 @@
+name: Deploy to VPS (manual)
+
+# Manual-only CI equivalent of scripts/deploy-push.sh (see DEPLOY.md §3).
+# Dormant until the repo secrets below are configured — safe to merge as-is; running it with no
+# secrets set just fails the ssh-agent step, it never touches the VPS.
+#
+# Required secrets (Settings → Secrets and variables → Actions):
+#   DEPLOY_SSH_KEY   private key (matches the public key authorized on the VPS), PEM format
+#   DEPLOY_HOST      e.g. 129.121.49.96
+#   DEPLOY_PORT      e.g. 22022
+#   DEPLOY_USER      SSH login user (rsync target)
+#   DEPLOY_OWNER     site-owner unix user the app/service runs as (e.g. bearm4935)
+#
+# Deliberately workflow_dispatch-only (no push trigger): a production deploy should be a conscious
+# click, not an accidental side effect of merging to main. Mirrors deploy-push.sh's 6 steps, but
+# runs scripts/deploy.sh (the server-side half, already designed for "or a CI runner" per its own
+# header comment) instead of duplicating the build/publish/health-gate logic here.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Snapshot (docroot + DB) on VPS
+        run: |
+          SSH="ssh -p ${{ secrets.DEPLOY_PORT }} -i ~/.ssh/deploy_key"
+          APP="/home/bearminds.cybersphere.com.br/app"
+          DOC="/home/bearminds.cybersphere.com.br/public_html"
+          $SSH "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "
+            BK=/home/backups/bearminds/\$(date +%Y%m%d-%H%M%S)-predeploy
+            mkdir -p \"\$BK\"
+            rsync -a $DOC/ \"\$BK/public_html/\"
+            for f in $APP/data/bearminds.db $APP/data/bearminds.db-wal $APP/data/bearminds.db-shm; do [ -f \"\$f\" ] && cp -a \"\$f\" \"\$BK/\"; done
+          "
+
+      - name: rsync source to VPS
+        run: |
+          rsync -az --delete \
+            --exclude='.git' --exclude='node_modules' --exclude='dist' \
+            --exclude='data' --exclude='.env' --exclude='.env.*' \
+            --exclude='.claude' --exclude='legacy' --exclude='.DS_Store' \
+            -e "ssh -p ${{ secrets.DEPLOY_PORT }} -i ~/.ssh/deploy_key" \
+            ./ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/home/bearminds.cybersphere.com.br/app/"
+          ssh -p "${{ secrets.DEPLOY_PORT }}" -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "chown -R ${{ secrets.DEPLOY_OWNER }}:${{ secrets.DEPLOY_OWNER }} /home/bearminds.cybersphere.com.br/app"
+
+      - name: Build + publish + restart + health gate (scripts/deploy.sh, on the VPS)
+        run: |
+          ssh -p "${{ secrets.DEPLOY_PORT }}" -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "
+            runuser -u ${{ secrets.DEPLOY_OWNER }} -- bash -lc '
+              export PATH=/usr/local/node24/bin:\$PATH
+              cd /home/bearminds.cybersphere.com.br/app
+              bash scripts/deploy.sh
+            '
+          "
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh -p "${{ secrets.DEPLOY_PORT }}" -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "
+            runuser -u ${{ secrets.DEPLOY_OWNER }} -- bash -lc '
+              export PATH=/usr/local/node24/bin:\$PATH
+              cd /home/bearminds.cybersphere.com.br/app
+              bash scripts/deploy.sh --rollback
+            '
+          "
