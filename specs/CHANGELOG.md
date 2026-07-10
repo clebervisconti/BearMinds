@@ -1,5 +1,27 @@
 # BearMinds — Spec Changelog
 
+## 2026-07-10 — Visão de próxima geração: pesquisa de features, design & UX (spec 18)
+
+- **Novo documento `specs/18-next-gen-vision.md`** (research/vision, não impl spec): consolida o que
+  precisamos desenvolver para uma plataforma de aprendizagem de próxima geração completa e inovadora,
+  focada no público-alvo (estudantes BR 6–19, pagador = responsável, beachhead 8–14 Mat. 6º–9º).
+- **Método:** reusou o pacote de estratégia da CS AI Strategy squad (memo + deep-review 2026-07-02) e
+  encomendou à squad **duas rodadas de pesquisa fresca 2025–2026** — (1) features de plataformas de
+  próxima geração, (2) padrões de design & UX para edtech jovem. Ambas com evidência causal e fontes.
+- **Âncora:** é a *pedagogia* da IA, não a presença dela, que gera aprendizagem (Kestin/Harvard ~2×/h com
+  guardrails; "faster completion, less learning" + preguiça metacognitiva quando a IA entrega resposta;
+  Khanmigo sem diferença vs. controle → rótulo "tutor de IA" não é moat). Isso reordena prioridades para
+  metacognição, calibração de confiança e scaffolding Socrático — tudo nativo do nosso moat.
+- **Conteúdo:** personas do público-alvo · inventário do estado atual · gap analysis de features em 7 temas
+  (SRL/metacognição, tutoria, experiência do responsável, adaptação/grafo BNCC, avaliação/anti-cola
+  arquitetural, habilidades da era da IA, gamificação SDT) com tabela top-12 priorizada e recorte de MVP ·
+  padrões de design (tokens semânticos estilo Wonder Blocks, tipografia/dislexia, calm tech, design por
+  banda etária) · padrões de UX (tutor de IA, gamificação SDT, onboarding ético, mobile/PWA, WCAG 2.2 AA,
+  LGPD art. 14) · 6 apostas de "próxima geração" · sequenciamento encaixado no roadmap (spec 11) +
+  anti-metas explícitas.
+- **Preserva** todos os guardrails (05) e LGPD (09); teste único de toda feature: "mantém o aluno fazendo o
+  esforço?". Registrado no `00-INDEX.md`. Nenhuma mudança de código de app neste documento.
+
 ## 2026-07-09 — P6 iniciado: WebSockets para live games + chat (push-to-refetch, fallback automático)
 
 - **Reconsideração da sessão anterior:** P6 tinha sido marcado como "não iniciado, deliberadamente" (gated

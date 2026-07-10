@@ -34,6 +34,7 @@
 | 15 | [15-assessment-core.md](15-assessment-core.md) | Assessment core — events stream, question bank, exams, assignments/rubrics, unlock engine | P5a |
 | 16 | [16-gestao-automacao.md](16-gestao-automacao.md) | Auto-matrícula, Duplicação, Boletim, Cronograma, Relatórios | P5b |
 | 17 | [17-engajamento-pratica.md](17-engajamento-pratica.md) | Quick Updates/Checklists, exemplares de pares, autoavaliação, Readiness 2.0, Missions-lite | P5c |
+| 18 | [18-next-gen-vision.md](18-next-gen-vision.md) | **Research & vision** — next-gen features, design standards & UX (evidence 2025–2026); gap analysis + sequencing (proposal, not impl spec) | vision |
 
 ## Current state → target state (one screen)
 
