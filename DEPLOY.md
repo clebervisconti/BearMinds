@@ -105,6 +105,28 @@ Rollback manual: `bash scripts/deploy.sh --rollback`.
 (b) o health gate é **localhost**, nunca a URL pública (Cloudflare Access devolve 302 → falso negativo/rollback eterno);
 (c) `node:sqlite` exige **Node 24** (`/usr/local/node24/bin` no PATH).
 
+### Deploy alternativo: GitHub Actions (`.github/workflows/deploy.yml`, 2026-07-09)
+
+Equivalente CI do `deploy-push.sh` acima — útil quando não há um Mac disponível (ex.: sessão headless do
+Claude Code). **Dormant por padrão**: `workflow_dispatch` manual (nunca dispara em push/merge — um deploy de
+produção deve ser um clique consciente), e falha de forma segura no primeiro passo se os secrets abaixo não
+estiverem configurados (nunca chega a tocar o VPS sem eles).
+
+**Configurar uma vez** (Settings → Secrets and variables → Actions do repo):
+```
+DEPLOY_SSH_KEY    chave privada (PEM) autorizada no VPS — NÃO reusar a chave do Keychain do Mac; gere uma
+                  dedicada: ssh-keygen -t ed25519 -f deploy_key -C "github-actions@bearminds" e adicione a
+                  pública em ~/.ssh/authorized_keys do usuário DEPLOY_USER no VPS.
+DEPLOY_HOST       129.121.49.96
+DEPLOY_PORT       22022
+DEPLOY_USER       usuário de login SSH (o que faz o rsync)
+DEPLOY_OWNER      usuário dono do site — bearm4935 (o serviço/build rodam como ele)
+```
+Depois, disparar em Actions → "Deploy to VPS (manual)" → Run workflow. Mesmos 6 passos do `deploy-push.sh`
+(snapshot → rsync → build → publica → restart → health gate + rollback automático em falha), mas via
+`scripts/deploy.sh` (a metade server-side, já pensada para rodar "por um runner de CI" — comentário no
+próprio script) em vez de duplicar a lógica de build no workflow.
+
 Cron/jobs (crontab do usuário do site — o `deploy.sh` server-side só é útil se a fonte for atualizada por CI/git):
 ```
 15 4 * * *  cd /home/bearminds.cybersphere.com.br/app && export PATH=/usr/local/node24/bin:$PATH && npm run jobs:nightly >> data/nightly.log 2>&1

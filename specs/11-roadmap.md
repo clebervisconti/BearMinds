@@ -113,8 +113,10 @@ algo já testado, não a viabilidade técnica:
   quebrar nada. Verificado com um round-trip real (registro → WS conecta → mutação REST → push recebido pelo
   socket), não só testes unitários do hub. **Pendente do owner**: confirmar/configurar o `extprocessor` +
   passthrough de `Upgrade`/`Connection` no vhost do VPS para a WS realmente funcionar em produção (ver DEPLOY.md).
-- ⏳ **Vídeo self-hosted / HLS / CDN** (hoje: embeds YouTube/Vimeo + upload ≤200MB) — decisão de custo/infra do
-  owner, não código.
+- ❌ **Vídeo self-hosted / HLS / CDN — DECIDIDO CONTRA** (2026-07-11, decisão do owner): sem hospedagem própria
+  de vídeo. A plataforma continua alavancando **embeds YouTube/Vimeo** (já implementado, `CursoPage.tsx`
+  `embedUrl()`) + upload direto ≤200MB p/ MP4 pontual (já implementado, `authoring.ts`). Este item sai do
+  roadmap — não é mais "gated", é encerrado.
 - ⏳ Projetos PBL/metaprojetos completos (Inteli) · Ensino Médio (ENEM) · piloto B2B lighthouse — conteúdo/vendas,
   não engenharia.
 
