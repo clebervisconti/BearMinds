@@ -2,8 +2,9 @@
 //  1) Hard-delete de contas soft-deleted há > 30 dias (+ dependências).
 //  2) Métricas diárias agregadas (sem export por criança).
 //  3) Coortes de retenção D1/D7/D30 a partir de study_sessions.
-import { db, nowIso } from "../db.ts";
+import { db, nowIso, getLastBackupTimestamp } from "../db.ts";
 import { logger } from "../logger.ts";
+import { fileURLToPath } from "node:url";
 import { pruneEvents } from "../lib/events.ts";
 import { pruneExpiredMissions } from "../lib/missions.ts";
 
@@ -110,18 +111,63 @@ export function runNightly(now = new Date()): void {
   const prunedEvents = pruneEvents(365);   // retenção do events stream (spec 15.1)
   const prunedMissions = pruneExpiredMissions(now);   // retenção limitada de mídia (spec 17.5, LGPD)
 
-  // Otimização do banco de dados (SQLite PRAGMA optimize)
+  // Otimização e limpeza do banco de dados (SQLite VACUUM, ANALYZE e PRAGMA optimize)
   try {
+    logger.info("Iniciando VACUUM e ANALYZE no SQLite...");
+    db.exec("VACUUM;");
+    db.exec("ANALYZE;");
     db.exec("PRAGMA optimize;");
+    logger.info("VACUUM, ANALYZE e PRAGMA optimize concluídos com sucesso.");
   } catch (e) {
-    logger.error({ err: String(e) }, "erro ao rodar PRAGMA optimize");
+    logger.error({ err: String(e) }, "erro ao rodar otimização SQLite");
   }
 
-  logger.info({ del, cohorts, prunedEvents, prunedMissions }, "nightly job concluído");
+  // Validação de integridade e chaves estrangeiras
+  let integrityStatus = "failed";
+  try {
+    logger.info("Iniciando PRAGMA integrity_check completo...");
+    const res = db.prepare("PRAGMA integrity_check").get() as Record<string, unknown> | undefined;
+    const val = res ? String(Object.values(res)[0]) : "unknown";
+    integrityStatus = val === "ok" ? "ok" : val;
+  } catch (e) {
+    logger.error({ err: String(e) }, "erro ao rodar PRAGMA integrity_check");
+  }
+
+  let fkStatus = "failed";
+  try {
+    logger.info("Iniciando PRAGMA foreign_key_check...");
+    const fkErrors = db.prepare("PRAGMA foreign_key_check").all();
+    fkStatus = fkErrors.length === 0 ? "ok" : "violations";
+  } catch (e) {
+    logger.error({ err: String(e) }, "erro ao rodar PRAGMA foreign_key_check");
+  }
+
+  // Grava resultados em app_settings para consulta no /api/health
+  try {
+    const upsertSetting = db.prepare(`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `);
+    
+    const nowStr = now.toISOString();
+    upsertSetting.run("db_integrity_status", integrityStatus, nowStr);
+    upsertSetting.run("db_integrity_checked_at", nowStr, nowStr);
+    upsertSetting.run("db_foreign_key_status", fkStatus, nowStr);
+    
+    const lastBackup = getLastBackupTimestamp();
+    if (lastBackup) {
+      upsertSetting.run("db_last_backup_at", lastBackup, nowStr);
+    }
+  } catch (e) {
+    logger.error({ err: String(e) }, "erro ao salvar métricas de integridade em app_settings");
+  }
+
+  logger.info({ del, cohorts, prunedEvents, prunedMissions, integrityStatus, fkStatus }, "nightly job concluído");
 }
 
 // Executado diretamente (cron) → roda e sai.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
   runNightly();
   // eslint-disable-next-line no-console
   console.log("✅ Nightly job concluído.");

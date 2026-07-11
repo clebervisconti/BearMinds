@@ -1,7 +1,9 @@
-// Bootstrap da API BearMinds (Hono sobre Node). IMPORTAR env PRIMEIRO.
+import "./instrumentation.ts";
 import { env } from "./env.ts";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import { shutdownTelemetry } from "./instrumentation.ts";
+import { closeDb } from "./db.ts";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -64,3 +66,35 @@ const server = serve({ fetch: app.fetch, port: env.port, hostname: process.env.H
 // P6 (roadmap 11): tempo real para live games + chat, com fallback automático a polling no cliente
 // se o upgrade de WebSocket não passar pelo proxy reverso (ver server/ws/server.ts).
 attachWebSocketServer(server);
+
+function gracefulShutdown(signal: string) {
+  logger.info({ signal }, `Recebido sinal ${signal}. Iniciando shutdown gracioso...`);
+  
+  server.close(async (err) => {
+    if (err) {
+      logger.error({ err }, "Erro ao encerrar servidor HTTP");
+    } else {
+      logger.info("Servidor HTTP encerrado.");
+    }
+    
+    try {
+      closeDb();
+      logger.info("Conexão do SQLite fechada com sucesso.");
+    } catch (e) {
+      logger.error({ err: String(e) }, "Erro ao fechar o banco de dados");
+    }
+    
+    await shutdownTelemetry();
+    logger.info("Observabilidade finalizada.");
+    process.exit(err ? 1 : 0);
+  });
+  
+  // Timeout de escape caso sockets permaneçam travados
+  setTimeout(() => {
+    logger.error("Shutdown forçado por timeout (10s).");
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
