@@ -10,6 +10,10 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { nanoid } from "nanoid";
 import { env } from "./env.ts";
+import { trace, SpanStatusCode } from "@opentelemetry/api";
+import { logger } from "./logger.ts";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 // Carrega o builtin via require em runtime (opaco ao transform do Vite/Vitest, que ainda
 // não reconhece `node:sqlite`). O import type acima é apagado na compilação.
@@ -36,10 +40,65 @@ raw.exec("PRAGMA cache_size = -10000");
 
 let txDepth = 0;
 
+const tracer = trace.getTracer("bearminds-db");
+
 // Adaptador com a superfície mínima usada em todo o servidor.
 export const db = {
   prepare(sql: string): Stmt {
-    return raw.prepare(sql) as unknown as Stmt;
+    const stmt = raw.prepare(sql) as unknown as Stmt;
+    return {
+      run(...params: unknown[]) {
+        return tracer.startActiveSpan(`db.run: ${sql.slice(0, 50)}`, (span) => {
+          span.setAttribute("db.statement", sql);
+          span.setAttribute("db.system", "sqlite");
+          try {
+            const res = stmt.run(...params);
+            span.setStatus({ code: SpanStatusCode.OK });
+            return res;
+          } catch (e) {
+            span.recordException(e as Error);
+            span.setStatus({ code: SpanStatusCode.ERROR, message: (e as Error).message });
+            throw e;
+          } finally {
+            span.end();
+          }
+        });
+      },
+      get<T = Row>(...params: unknown[]) {
+        return tracer.startActiveSpan(`db.get: ${sql.slice(0, 50)}`, (span) => {
+          span.setAttribute("db.statement", sql);
+          span.setAttribute("db.system", "sqlite");
+          try {
+            const res = stmt.get<T>(...params);
+            span.setStatus({ code: SpanStatusCode.OK });
+            return res;
+          } catch (e) {
+            span.recordException(e as Error);
+            span.setStatus({ code: SpanStatusCode.ERROR, message: (e as Error).message });
+            throw e;
+          } finally {
+            span.end();
+          }
+        });
+      },
+      all<T = Row>(...params: unknown[]) {
+        return tracer.startActiveSpan(`db.all: ${sql.slice(0, 50)}`, (span) => {
+          span.setAttribute("db.statement", sql);
+          span.setAttribute("db.system", "sqlite");
+          try {
+            const res = stmt.all<T>(...params);
+            span.setStatus({ code: SpanStatusCode.OK });
+            return res;
+          } catch (e) {
+            span.recordException(e as Error);
+            span.setStatus({ code: SpanStatusCode.ERROR, message: (e as Error).message });
+            throw e;
+          } finally {
+            span.end();
+          }
+        });
+      },
+    };
   },
   exec(sql: string): void {
     raw.exec(sql);
@@ -726,6 +785,16 @@ CREATE TABLE IF NOT EXISTS mission_reviews (
 CREATE INDEX IF NOT EXISTS idx_missions_item ON mission_submissions(item_id);
 CREATE INDEX IF NOT EXISTS idx_missions_retention ON mission_submissions(retention_until);
 
+CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_id);
+CREATE INDEX IF NOT EXISTS idx_iprog_item ON item_progress(item_id);
+CREATE INDEX IF NOT EXISTS idx_children_inst ON children(institution_id);
+CREATE INDEX IF NOT EXISTS idx_files_owner ON files(owner_parent_id);
+CREATE INDEX IF NOT EXISTS idx_polls_course ON polls(course_id);
+CREATE INDEX IF NOT EXISTS idx_tutornotes_child ON tutor_notes(child_id);
+CREATE INDEX IF NOT EXISTS idx_invites_email ON invites(email);
+CREATE INDEX IF NOT EXISTS idx_missionrev_submission ON mission_reviews(mission_submission_id);
+CREATE INDEX IF NOT EXISTS idx_checklist_child ON checklist_state(child_id);
+
 -- ===== P5-r: founding-member paywall (link manual) =====
 -- app_settings guarda 'founding_member_link' / 'founding_member_price_label'. Marcação manual do
 -- owner (após confirmar pagamento fora do sistema) fica em parents.founding_member_at (ver ensureColumns).
@@ -851,16 +920,107 @@ export function initDb(): void {
     }
   }
   if (version < SCHEMA_VERSION) db.pragma(`user_version = ${SCHEMA_VERSION}`);
+
+  // Fast integrity check on startup
+  try {
+    const res = raw.prepare("PRAGMA integrity_check(1)").get() as Record<string, unknown> | undefined;
+    const val = res ? Object.values(res)[0] : "unknown";
+    if (val !== "ok") {
+      logger.error({ integrity: val }, "⚠️ AVISO: Falha no integrity_check do SQLite na inicialização!");
+    } else {
+      logger.info("SQLite integrity_check: OK");
+    }
+  } catch (e) {
+    logger.error({ err: String(e) }, "Falha ao executar PRAGMA integrity_check na inicialização");
+  }
+
+  try {
+    const fkErrors = raw.prepare("PRAGMA foreign_key_check").all();
+    if (fkErrors.length > 0) {
+      logger.error({ fkErrors }, "⚠️ AVISO: Violações de chave estrangeira (foreign key) detectadas na inicialização!");
+    } else {
+      logger.info("SQLite foreign_key_check: OK");
+    }
+  } catch (e) {
+    logger.error({ err: String(e) }, "Falha ao executar PRAGMA foreign_key_check na inicialização");
+  }
+
   initialized = true;
 }
 
 export function dbHealth(): boolean {
   try {
-    db.prepare("SELECT 1").get();
+    raw.prepare("SELECT 1").get();
     return true;
   } catch {
     return false;
   }
+}
+
+export function closeDb(): void {
+  try {
+    raw.close();
+  } catch (e) {
+    logger.error({ err: String(e) }, "Erro ao fechar conexão bruta com SQLite");
+  }
+}
+
+export function getLastBackupTimestamp(): string | null {
+  const backupDir = process.env.BACKUP_DIR || "/home/backups/bearminds";
+  try {
+    if (!existsSync(backupDir)) return null;
+    const files = readdirSync(backupDir);
+    let latestTime = 0;
+    for (const f of files) {
+      const fullPath = join(backupDir, f);
+      const stat = statSync(fullPath);
+      if (stat.isFile() && (f.endsWith(".db") || f.includes("predeploy") || f.includes("nightly"))) {
+        if (stat.mtimeMs > latestTime) {
+          latestTime = stat.mtimeMs;
+        }
+      } else if (stat.isDirectory() && f.includes("-predeploy")) {
+        if (stat.mtimeMs > latestTime) {
+          latestTime = stat.mtimeMs;
+        }
+      }
+    }
+    return latestTime > 0 ? new Date(latestTime).toISOString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getDbDetailedHealth() {
+  const up = dbHealth();
+  let integrity = "unknown";
+  let checkedAt: string | null = null;
+  let lastBackupAt: string | null = null;
+
+  if (up) {
+    try {
+      const statusRow = raw.prepare("SELECT value FROM app_settings WHERE key = 'db_integrity_status'").get() as { value: string } | undefined;
+      const checkedRow = raw.prepare("SELECT value FROM app_settings WHERE key = 'db_integrity_checked_at'").get() as { value: string } | undefined;
+      const backupRow = raw.prepare("SELECT value FROM app_settings WHERE key = 'db_last_backup_at'").get() as { value: string } | undefined;
+      
+      if (statusRow) integrity = statusRow.value;
+      if (checkedRow) checkedAt = checkedRow.value;
+      if (backupRow) lastBackupAt = backupRow.value;
+    } catch {
+      // app_settings doesn't exist yet or query failed (e.g. initial setup)
+    }
+  }
+
+  // Fallback to disk check for backups if not in DB
+  if (!lastBackupAt) {
+    lastBackupAt = getLastBackupTimestamp();
+  }
+
+  return {
+    status: up ? "up" : "down",
+    integrity,
+    integrity_checked_at: checkedAt,
+    last_backup_at: lastBackupAt,
+  };
 }
 
 // Auto-inicializa ao importar, garantindo que o schema exista para qualquer consumidor.

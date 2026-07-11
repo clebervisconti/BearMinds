@@ -3,7 +3,7 @@ import type { AppEnv } from "../lib/http.ts";
 import { securityHeaders } from "../middleware/security.ts";
 import { appVersion } from "../version.ts";
 import { llmConfigured } from "../env.ts";
-import { dbHealth } from "../db.ts";
+import { dbHealth, getDbDetailedHealth } from "../db.ts";
 import authRoutes from "./auth.ts";
 import catalogRoutes from "./catalog.ts";
 import generateRoutes from "./generate.ts";
@@ -40,14 +40,17 @@ export function mountRoutes(app: Hono<AppEnv>) {
   app.use("*", securityHeaders);
 
   // Deploy gate (spec 10.3)
-  app.get("/api/health", (c) =>
-    c.json({
-      ok: true,
+  app.get("/api/health", (c) => {
+    const dbDetail = getDbDetailedHealth();
+    return c.json({
+      ok: dbDetail.status === "up",
       version: appVersion,
-      db: dbHealth() ? "up" : "down",
+      db: dbDetail.status,
+      db_detail: dbDetail,
       llm: llmConfigured ? "configured" : "unconfigured",
-    }),
-  );
+      otel: process.env.OTEL_ENABLED === "true" ? "active" : "disabled",
+    });
+  });
 
   app.route("/", authRoutes);
   app.route("/", meRoutes);

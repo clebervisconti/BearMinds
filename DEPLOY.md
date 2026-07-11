@@ -56,20 +56,21 @@ Config **realmente aplicada** (docroot = `public_html`, `autoLoadHtaccess 1`):
   2. Em `public_html/.htaccess`:
      ```
      RewriteEngine On
+     
+     # Passthrough para conexões WebSocket (live games e chat)
+     RewriteCond %{HTTP:Upgrade} =websocket [NC]
+     RewriteCond %{HTTP:Connection} upgrade [NC]
+     RewriteRule ^ws/(.*)$ http://127.0.0.1:8787/ws/$1 [P,L]
+
+     # Proxy para a API REST
      RewriteRule ^api/(.*)$ http://127.0.0.1:8787/api/$1 [P,L]
+
      RewriteCond %{REQUEST_FILENAME} !-f
      RewriteCond %{REQUEST_FILENAME} !-d
      RewriteRule ^ /index.html [L]
      ```
   > Sem o extprocessor nomeado, o `[P]` devolve **500** ("Proxy target is not defined on external application list").
-- **WebSocket upgrade (P6, `server/ws/`, 2026-07-09):** o Node agora aceita upgrade de WS em `/ws/live/:pin`,
-  `/ws/chat/channel/:courseId` e `/ws/chat/thread/:id` (tempo real de live games + chat, substitui polling).
-  **Pendente de configurar no VPS** (não verificado nesta sessão, sem acesso ao servidor): o `extprocessor`
-  acima faz proxy HTTP comum — para repassar o handshake de WebSocket é preciso confirmar/adicionar
-  passthrough dos headers `Upgrade`/`Connection` no `[P]` do `.htaccess` (ou um `RewriteRule` dedicado para
-  `^ws/`). **Se isso não for configurado, nada quebra** — o cliente detecta que a conexão WS não abre e cai
-  automaticamente de volta para o polling já testado (spec 14/17, ver `src/lib/liveSocket.ts`). Configurar é
-  opcional/incremental, não bloqueia o deploy.
+- **WebSocket upgrade (P6, `server/ws/`, 2026-07-09):** o Node aceita upgrade de WS em `/ws/live/:pin`, `/ws/chat/channel/:courseId` e `/ws/chat/thread/:id`. A configuração do `.htaccess` acima encaminha corretamente o handshake HTTP de upgrade para a porta 8787 do Node. Se a conexão WS falhar, o cliente degrada automaticamente para polling REST.
 - Editar `vhost.conf` afeta só este vhost, mas **faça backup e verifique clebervisconti.com** após `lswsctrl reload` (box compartilhado). Rollback = restaurar o backup + reload.
 - **Let's Encrypt** já gerenciado pelo CyberPanel. O `context /.well-known/acme-challenge` do vhost fica fora do docroot — a renovação segue funcionando. (Se o gate do Cloudflare Access ficar muito tempo, garanta a renovação do cert origin p/ o SSL Full-strict.)
 - **Firewalld:** 8787 NÃO exposto (só localhost + bind `HOST=127.0.0.1`). A API só é alcançável via proxy.
