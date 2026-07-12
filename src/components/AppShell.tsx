@@ -26,9 +26,9 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
       <header className="bm-topnav">
         <div className="bm-topnav-in">
           <Link to="/" className="bm-logo">
-            <span className="bm-logo-mark" aria-hidden>🐻</span>
+            <img src="/logo.png" alt="BearMinds Crest" style={{ height: "36px", width: "36px", objectFit: "contain", marginRight: "2px" }} />
             <span className="bm-logo-txt">
-              <strong>BearMinds</strong>
+              <strong style={{ fontFamily: "var(--bm-font-display)" }}>BearMinds</strong>
               <em>plataforma de estudos</em>
             </span>
           </Link>

@@ -1,10 +1,17 @@
-/* CYBERSPHERE Design System (light): Plus Jakarta Sans (títulos) + Poppins (corpo) — self-hosted (CSP). */
-@import "@fontsource-variable/plus-jakarta-sans";
-@import "@fontsource/poppins/300.css";
-@import "@fontsource/poppins/400.css";
-@import "@fontsource/poppins/500.css";
-@import "@fontsource/poppins/600.css";
-@import "@fontsource/poppins/700.css";
+/* BearMinds Academic Design System: Source Serif 4 (headings) + Public Sans (body/UI) + Oswald (labels/eyebrows) — self-hosted. */
+@import "@fontsource/source-serif-4/400.css";
+@import "@fontsource/source-serif-4/500.css";
+@import "@fontsource/source-serif-4/600.css";
+@import "@fontsource/source-serif-4/700.css";
+@import "@fontsource/public-sans/400.css";
+@import "@fontsource/public-sans/500.css";
+@import "@fontsource/public-sans/600.css";
+@import "@fontsource/public-sans/700.css";
+@import "@fontsource/oswald/500.css";
+@import "@fontsource/oswald/600.css";
+@import "@fontsource/oswald/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 @import "./styles/skins.css";
 
 @tailwind base;
@@ -22,7 +29,7 @@
     color: var(--bm-ink);
     font-family: var(--bm-font);
     font-size: calc(15px * var(--bm-scale));
-    line-height: 1.55;
+    line-height: var(--bm-lh-body, 1.6);
     letter-spacing: -0.006em;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
       env(safe-area-inset-left);
@@ -37,16 +44,19 @@
   }
   h1, h2, h3, h4 {
     color: var(--bm-ink);
-    font-family: var(--bm-font-heading);
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-    font-weight: 700;
+    font-family: var(--bm-font-display);
+    line-height: var(--bm-lh-heading, 1.24);
+    letter-spacing: var(--bm-tracking-display, -0.01em);
+    font-weight: 600;
   }
-  /* CYBERSPHERE light: link escuro com sublinhado Verde Ascensão (nunca texto verde no branco). */
   a {
     color: var(--bm-link);
     text-decoration-color: var(--bm-accent);
-    text-underline-offset: 2px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--bm-forest-900, #0c3d18);
+    text-decoration-color: var(--bm-forest-700, #157a2e);
   }
 }
 
@@ -54,28 +64,28 @@
   /* ---- superfícies ---- */
   .bm-card {
     background: var(--bm-surface);
-    border: 1px solid var(--bm-border);
+    border: var(--bm-rule);
     border-radius: var(--bm-radius);
     padding: 1.1rem 1.2rem;
     box-shadow: var(--bm-shadow);
   }
   .bm-card-flat {
     background: var(--bm-surface);
-    border: 1px solid var(--bm-border);
+    border: var(--bm-rule);
     border-radius: var(--bm-radius);
   }
 
   /* ---- tipografia utilitária ---- */
   .bm-eyebrow {
-    font-family: var(--bm-font-heading);
-    font-size: 0.68rem;
+    font-family: var(--bm-font-label);
+    font-size: var(--bm-fs-eyebrow, 0.72rem);
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.09em;
+    letter-spacing: var(--bm-tracking-eyebrow, 0.11em);
     color: var(--bm-muted);
   }
   .bm-meta {
-    font-size: 0.8rem;
+    font-size: var(--bm-fs-meta, 0.82rem);
     color: var(--bm-muted);
   }
 
@@ -86,25 +96,25 @@
     justify-content: center;
     gap: 0.45rem;
     min-height: 42px;
-    padding: 0.55rem 1.1rem;
-    border-radius: 10px;
+    padding: 0.55rem 1.15rem;
+    border-radius: var(--bm-radius-sm);
     background: var(--bm-primary);
     color: var(--bm-primary-ink);
     border: 0;
     font-family: var(--bm-font-heading);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.92rem;
     cursor: pointer;
     transition: transform 0.06s ease, filter 0.15s ease, background 0.15s ease;
   }
-  .bm-btn:hover { filter: brightness(0.96); }
-  .bm-btn:active { transform: translateY(1px); }
+  .bm-btn:hover { background: var(--bm-green-neon-600, #22bd00); }
+  .bm-btn:active { transform: translateY(1px); background: var(--bm-green-neon-700, #1ba300); }
   .bm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .bm-btn-ghost {
     background: transparent;
     color: var(--bm-link);
-    border: 1px solid var(--bm-border);
-    font-weight: 600;
+    border: 1.5px solid var(--bm-border);
+    font-weight: 700;
   }
   .bm-btn-ghost:hover { background: var(--bm-surface-2); filter: none; border-color: var(--bm-primary); }
   .bm-btn-quiet {
@@ -122,8 +132,8 @@
     width: 100%;
     min-height: 42px;
     padding: 0.55rem 0.85rem;
-    border-radius: 10px;
-    border: 1px solid var(--bm-border);
+    border-radius: var(--bm-radius-sm);
+    border: 1.5px solid var(--bm-border);
     background: var(--bm-surface);
     color: var(--bm-ink);
     font-size: 0.95rem;
@@ -133,29 +143,30 @@
   .bm-input:focus {
     outline: none;
     border-color: var(--bm-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bm-primary) 14%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bm-primary) 16%, transparent);
   }
 
-  /* ---- tabs (Olympus-style, sublinhado) ---- */
+  /* ---- tabs ---- */
   .bm-tabs {
     display: flex;
     gap: 1.4rem;
-    border-bottom: 1px solid var(--bm-border);
+    border-bottom: var(--bm-rule);
   }
   .bm-tabitem {
     background: none;
     border: 0;
     padding: 0.55rem 0.15rem;
     font-size: 0.92rem;
-    font-weight: 550;
+    font-weight: 600;
     color: var(--bm-muted);
     cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
+    font-family: var(--bm-font-heading);
   }
   .bm-tabitem.active {
-    color: var(--bm-link);
-    border-bottom-color: var(--bm-primary);
+    color: var(--bm-ink);
+    border-bottom-color: var(--bm-accent);
     font-weight: 700;
   }
 
@@ -165,10 +176,10 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.28rem 0.7rem;
-    border-radius: 999px;
+    border-radius: var(--bm-radius-pill);
     background: var(--bm-surface-2);
     font-size: 0.82rem;
-    font-weight: 550;
+    font-weight: 600;
     color: var(--bm-ink);
     border: 1px solid transparent;
   }
@@ -177,31 +188,44 @@
     border-color: var(--bm-border);
   }
 
-  /* ---- linhas de lista (Olympus rows) ---- */
+  /* ---- linhas de lista ---- */
   .bm-row {
     display: flex;
     align-items: center;
     gap: 0.9rem;
     padding: 0.85rem 1.1rem;
     background: var(--bm-surface);
-    border: 1px solid var(--bm-border);
+    border: var(--bm-rule);
     border-radius: var(--bm-radius);
     transition: border-color .12s ease, box-shadow .12s ease;
   }
   button.bm-row { cursor: pointer; width: 100%; text-align: left; font: inherit; color: inherit; }
-  .bm-row:hover { border-color: color-mix(in srgb, var(--bm-primary) 35%, var(--bm-border)); box-shadow: var(--bm-shadow); }
+  .bm-row:hover { border-color: color-mix(in srgb, var(--bm-primary) 40%, var(--bm-border)); box-shadow: var(--bm-shadow); }
   .bm-row .thumb {
-    width: 44px; height: 44px; border-radius: 10px; flex: none;
-    display: grid; place-items: center; font-size: 1.25rem;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--bm-radius-sm);
+    flex: none;
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
     background: var(--bm-surface-2);
   }
 
   /* ---- avatar com iniciais ---- */
   .bm-avatar-i {
-    width: 36px; height: 36px; border-radius: 999px; flex: none;
-    display: grid; place-items: center;
-    font-size: 0.82rem; font-weight: 700; color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #fff;
     background: var(--av-bg, var(--bm-primary));
+    font-family: var(--bm-font-label);
+    letter-spacing: 0.02em;
   }
 
   /* ---- shell / página ---- */
@@ -212,9 +236,10 @@
     min-height: 100dvh;
   }
   .bm-page-head { margin: 0 0 1.2rem; }
-  .bm-page-head h1 { font-size: 1.45rem; margin: 0; }
-  .bm-page-head .sub { color: var(--bm-muted); margin-top: 0.25rem; font-size: 0.92rem; }
+  .bm-page-head h1 { font-size: var(--bm-fs-display-md, 1.85rem); margin: 0; }
+  .bm-page-head .sub { color: var(--bm-muted); margin-top: 0.3rem; font-size: 0.92rem; }
 
   /* ---- progress ring util ---- */
-  .bm-divider { border: 0; border-top: 1px solid var(--bm-border); margin: 0.9rem 0; }
+  .bm-divider { border: 0; border-top: var(--bm-rule); margin: 0.9rem 0; }
 }
+
