@@ -9,17 +9,9 @@ function AuthShell({ title, children }: { title: string; children: React.ReactNo
     <div style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: "1.2rem", background: "var(--bm-bg)" }}>
       <div style={{ width: "100%", maxWidth: 430, display: "grid", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: ".65rem", justifyContent: "center" }}>
-          <span
-            aria-hidden
-            style={{
-              width: 44, height: 44, borderRadius: 12, display: "grid", placeItems: "center", fontSize: "1.4rem",
-              background: "linear-gradient(135deg,#28d600,#1faf00)",
-            }}
-          >
-            🐻
-          </span>
+          <img src="/logo.png" alt="BearMinds Crest" style={{ height: "48px", width: "48px", objectFit: "contain", marginRight: "4px" }} />
           <div style={{ lineHeight: 1.1 }}>
-            <div style={{ fontWeight: 750, fontSize: "1.15rem", letterSpacing: "-.01em" }}>BearMinds</div>
+            <div style={{ fontWeight: 750, fontSize: "1.25rem", fontFamily: "var(--bm-font-display)", letterSpacing: "-.01em", color: "var(--bm-ink)" }}>BearMinds</div>
             <div style={{ color: "var(--bm-muted)", fontSize: ".72rem", letterSpacing: ".04em" }}>plataforma de estudos · aprender, não colar</div>
           </div>
         </div>

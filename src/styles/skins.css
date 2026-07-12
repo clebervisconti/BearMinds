@@ -6,95 +6,157 @@
    ============================================================ */
 
 /* ============================================================
-   Tema padrão da plataforma = CYBERSPHERE Design System (light).
-   Preto Neural #1e1e1e · Verde Ascensão #28d600 (só FILL/regra, nunca texto no branco) ·
-   Plus Jakarta Sans (títulos) + Poppins (corpo). Fonte: skill cs-branding.
+   Tema padrão da plataforma = BearMinds Academic (light).
    ============================================================ */
 :root {
-  --bm-radius: 12px;
-  --bm-font: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;                 /* corpo */
-  --bm-font-heading: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, sans-serif;    /* títulos/CTAs/eyebrows */
-  --bm-shadow: 0 1px 2px rgba(30, 30, 30, 0.06);
-  --bm-shadow-lg: 0 10px 28px rgba(30, 30, 30, 0.10);
+  /* ---- neutrals (cool, faint green undertone) ---- */
+  --bm-white:  #ffffff;
+  --bm-n-50:   #f5f7f4;   /* page background */
+  --bm-n-100:  #eef2ec;   /* recessed surface / chips / thumbs */
+  --bm-n-200:  #dce4dc;   /* hairline borders */
+  --bm-ink-900:#0c1a10;   /* primary text — near-black green */
+  --bm-ink-600:#3a473e;
+  --bm-ink-400:#6b776d;   /* muted text */
 
-  /* fallback = CYBERSPHERE light */
-  --bm-bg: #f5f5f5;             /* canvas — cinza CYBERSPHERE */
-  --bm-surface: #ffffff;        /* cards brancos, elevados */
-  --bm-surface-2: #ececec;      /* chips / hover / thumbs */
-  --bm-ink: #1e1e1e;            /* Preto Neural */
-  --bm-muted: #5f5f5f;          /* cinza neutro (≈ Preto Neural 66%) */
-  --bm-primary: #28d600;        /* Verde Ascensão — SÓ preenchimento/regra */
-  --bm-primary-ink: #1e1e1e;    /* texto sobre o verde (CTA CYBERSPHERE) */
-  --bm-link: #1e1e1e;           /* texto interativo no claro = escuro (verde vira sublinhado) */
-  --bm-accent: #28d600;         /* ênfase (KPIs como regra/barra) */
-  --bm-success: #178000;        /* verde escuro legível p/ texto de sucesso */
-  --bm-warn: #b5651d;
-  --bm-danger: #d92d20;
-  --bm-border: #e2e2e2;         /* ≈ Preto Neural 12% sobre branco */
+  /* ---- green (monochrome, anchored on Verde Ascensão) ---- */
+  --bm-green-50:  #ecfce6;
+  --bm-green-100: #cdf5c0;
+  --bm-neon:      #28d600; /* Verde Ascensão — primary fill + accent */
+  --bm-neon-600:  #22bd00; /* hover */
+  --bm-neon-700:  #1ba300; /* active / pressed */
+  --bm-green-700: #157a2e; /* deep readable green — text emphasis, links, icons */
+  --bm-green-900: #0c3d18; /* dark surface — wordmark, hero, monogram bg */
+
+  /* ---- semantic status (meaning colors — kept crisp, used sparingly) ---- */
+  --bm-danger:  #c62f28;
+  --bm-warn:    #b8791b;
+  --bm-success: #1a9e3f;
+
+  /* ---- semantic aliases (consumed by components + .bm-* utilities) ---- */
+  --bm-bg: var(--bm-n-50);
+  --bm-surface: var(--bm-white);
+  --bm-surface-2: var(--bm-n-100);
+  --bm-ink: var(--bm-ink-900);
+  --bm-muted: var(--bm-ink-400);
+  --bm-border: var(--bm-n-200);
+
+  --bm-primary: var(--bm-neon);              /* Verde Ascensão fill */
+  --bm-primary-ink: #06210a;                 /* near-black green ink on neon */
+  --bm-primary-strong: var(--bm-green-700);  /* readable deep green for text/links */
+  --bm-secondary: var(--bm-green-900);       /* dark green surfaces */
+  --bm-accent: var(--bm-neon);               /* single accent — focus, progress, tabs */
+  --bm-link: var(--bm-green-700);
+
+  --text-body: var(--bm-ink-900);
+  --text-muted: var(--bm-ink-400);
+  --surface-card: var(--bm-white);
+  --surface-page: var(--bm-bg);
+
+  /* ---- back-compat aliases (older token names still referenced in a few files) ---- */
+  --bm-forest-900: var(--bm-green-900);
+  --bm-forest-800: #0f3a17;
+  --bm-forest-700: var(--bm-green-700);
+  --bm-forest-600: #12703a;
+  --bm-forest-500: var(--bm-neon);
+  --bm-forest-100: var(--bm-green-100);
+  --bm-forest-50:  var(--bm-green-50);
+  --bm-green-neon-600: var(--bm-neon-600);
+  --bm-green-neon-700: var(--bm-neon-700);
+  --bm-navy-900: #071f13;
+  --bm-navy-700: var(--bm-green-900);
+  --bm-navy-500: #2b6e3f;
+
+  /* ---- typography tokens ---- */
+  --bm-font-display: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --bm-font: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bm-font-heading: "Public Sans", system-ui, sans-serif;
+  --bm-font-label: "Oswald", "Public Sans", sans-serif;
+  --bm-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
   --bm-scale: 1;
+
+  /* spacing, radius & elevation tokens */
+  --bm-space-1: 0.25rem;
+  --bm-space-2: 0.5rem;
+  --bm-space-3: 0.75rem;
+  --bm-space-4: 1rem;
+  --bm-space-5: 1.5rem;
+  --bm-space-6: 2rem;
+  --bm-space-7: 3rem;
+  --bm-space-8: 4.5rem;
+
+  --bm-radius-sm: 4px;
+  --bm-radius: 8px;
+  --bm-radius-lg: 14px;
+  --bm-radius-pill: 999px;
+
+  --bm-shadow: 0 1px 2px rgba(28, 26, 23, 0.08);
+  --bm-shadow-lg: 0 12px 32px rgba(28, 26, 23, 0.14);
+  --bm-rule: 1px solid var(--bm-border);
+  --bm-rule-heavy: 2px solid var(--bm-ink-900);
 }
 
-/* FORMAL = CYBERSPHERE light (plataforma inteira). */
+/* FORMAL = BearMinds Academic (plataforma inteira). */
 [data-skin="formal"] {
-  --bm-radius: 12px;
-  --bm-bg: #f5f5f5;
-  --bm-surface: #ffffff;
-  --bm-surface-2: #ececec;
-  --bm-ink: #1e1e1e;
-  --bm-muted: #5f5f5f;
-  --bm-primary: #28d600;
-  --bm-primary-ink: #1e1e1e;
-  --bm-link: #1e1e1e;
-  --bm-accent: #28d600;
-  --bm-success: #178000;
-  --bm-warn: #b5651d;
-  --bm-danger: #d92d20;
-  --bm-border: #e2e2e2;
+  --bm-radius: var(--bm-radius);
+  --bm-bg: var(--bm-n-50);
+  --bm-surface: var(--bm-white);
+  --bm-surface-2: var(--bm-n-100);
+  --bm-ink: var(--bm-ink-900);
+  --bm-muted: var(--bm-ink-400);
+  --bm-primary: var(--bm-neon);
+  --bm-primary-ink: #06210a;
+  --bm-link: var(--bm-green-700);
+  --bm-accent: var(--bm-neon);
+  --bm-success: var(--bm-success);
+  --bm-warn: var(--bm-warn);
+  --bm-danger: var(--bm-danger);
+  --bm-border: var(--bm-n-200);
   --bm-scale: 1;
 }
 
-/* 8–10 — caloroso, lúdico, alvos grandes */
+/* 8–10 — lúdico acadêmico, alvos grandes */
 [data-skin="8-10"] {
   --bm-radius: 24px;
-  --bm-bg: #fff7ed;
-  --bm-surface: #ffffff;
-  --bm-surface-2: #fff0de;
-  --bm-ink: #2b2118;
-  --bm-muted: #8a7b6b;
-  --bm-primary: #f59e0b;
-  --bm-primary-ink: #ffffff;
-  --bm-accent: #34c77b;
-  --bm-border: #f0e2ce;
+  --bm-bg: var(--bm-n-50);
+  --bm-surface: var(--bm-white);
+  --bm-surface-2: var(--bm-n-100);
+  --bm-ink: var(--bm-ink-900);
+  --bm-muted: var(--bm-ink-400);
+  --bm-primary: var(--bm-neon);
+  --bm-primary-ink: #06210a;
+  --bm-accent: var(--bm-neon);
+  --bm-border: var(--bm-n-200);
   --bm-scale: 1.12;
 }
 
-/* 11–14 — moderno, peer-like (padrão) */
+/* 11–14 — moderno acadêmico (padrão) */
 [data-skin="11-14"] {
   --bm-radius: 16px;
-  --bm-bg: #f7f8fc;
-  --bm-surface: #ffffff;
-  --bm-surface-2: #eef1fa;
-  --bm-ink: #1a1e2b;
-  --bm-muted: #6b7280;
-  --bm-primary: #6366f1;
-  --bm-primary-ink: #ffffff;
-  --bm-accent: #34c77b;
-  --bm-border: #e4e7f2;
+  --bm-bg: var(--bm-n-50);
+  --bm-surface: var(--bm-white);
+  --bm-surface-2: var(--bm-n-100);
+  --bm-ink: var(--bm-ink-900);
+  --bm-muted: var(--bm-ink-400);
+  --bm-primary: var(--bm-neon);
+  --bm-primary-ink: #06210a;
+  --bm-accent: var(--bm-neon);
+  --bm-border: var(--bm-n-200);
   --bm-scale: 1;
 }
 
-/* 15–18 — coach/analytics, escuro, compacto */
+/* 15–18 — analytics escuro acadêmico, compacto */
 [data-skin="15-18"] {
   --bm-radius: 12px;
-  --bm-bg: #0f1620;
-  --bm-surface: #17202c;
-  --bm-surface-2: #1f2a38;
-  --bm-ink: #e7ecf3;
-  --bm-muted: #93a0b4;
-  --bm-primary: #2dd4bf;
-  --bm-primary-ink: #06231f;
-  --bm-accent: #34c77b;
-  --bm-border: #26303e;
+  --bm-bg: #07120a;
+  --bm-surface: #0c1a10;
+  --bm-surface-2: #12291f;
+  --bm-ink: #ecfce6;
+  --bm-muted: #6b776d;
+  --bm-primary: var(--bm-neon);
+  --bm-primary-ink: #06210a;
+  --bm-accent: var(--bm-neon);
+  --bm-border: #1a3526;
   --bm-scale: 0.96;
 }
+
