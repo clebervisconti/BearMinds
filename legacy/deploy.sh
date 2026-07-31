@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# ==========================================================================
+# ⛔ DESATIVADO — 2026-07-30. O VPS HostGator foi eliminado.
+#
+# Este script fazia rsync --delete para 129.121.49.96, que NAO e mais nosso.
+# Aquele IP pode ter sido reatribuido a outro cliente: executar isto hoje
+# enviaria arquivos para um servidor de terceiros. Por isso aborta em vez de
+# apenas falhar.
+#
+# Onde as apps rodam agora: Cloudflare Tunnel a partir de HULK e B4TM4N,
+# cada uma um servico launchd. Veja infra/docs/naming-standard.md no
+# repositorio cyberlabs-infra.
+# ==========================================================================
+echo "ABORTADO: este deploy aponta para o VPS HostGator, que foi eliminado." >&2
+echo "Veja o cabecalho deste arquivo." >&2
+exit 1
+
 # BearMinds — deploy: rsync public/ -> VPS docroot + reload OpenLiteSpeed.
 set -euo pipefail
 

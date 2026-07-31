@@ -1,5 +1,19 @@
 # 10 · Deployment (bearminds.cybersphere.com.br)
 
+> ⚠️ **OBSOLETO em 2026-07-30 — o VPS HostGator foi eliminado.**
+>
+> Tudo que este documento descreve sobre deploy (SSH para `129.121.49.96`, rsync para o docroot
+> do OpenLiteSpeed, CyberPanel, cron de pull) **não existe mais**. Os scripts correspondentes
+> foram desativados e abortam se executados.
+>
+> **Como funciona hoje:** cada app é um serviço launchd exposto por Cloudflare Tunnel —
+> `agentos` a partir do HULK; `bearminds`, `postiz`, `sh3rl0ck`, `llmviz`, `neuralnetviz` e
+> `visioludens` a partir do B4TM4N (`10.10.1.100`). Segredos vêm do Keychain de login.
+> Referência: `infra/docs/naming-standard.md` no repo `cyberlabs-infra`.
+>
+> O restante do documento é mantido como registro histórico.
+
+
 **Infra (existing, verified):** HostGator VPS `129.121.49.96` (SSH port 22022, key auth) · CyberPanel/OpenLiteSpeed · Cloudflare zone `cybersphere.com.br` (id `cbb665dcd1447268f6fe8b0437d1fcc6`), record `bearminds` proxied, SSL Full (strict). Deploy pipeline patterns from skills: `cs-app-deployment` (orchestrator), `hostgator-vps-manager` (origin), `cloudflare-manager` (edge). The legacy static deploy (`legacy/deploy.sh`, rsync to OLS docroot) keeps working until cutover.
 
 ## 10.1 Environments
