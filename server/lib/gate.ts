@@ -6,6 +6,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { env } from "../env.ts";
 import { appleAuthorizeUrl, appleExchangeCode, appleVerifyIdToken } from "./apple.ts";
+import { emitAuthEvent, clientIp } from "./cim-auth.ts";
 import { logger } from "../logger.ts";
 import type { AppEnv } from "./http.ts";
 
@@ -98,12 +99,16 @@ export function mountGate(app: Hono<AppEnv>): void {
       const code = String(form.code || "");
       const state = String(form.state || "");
       const st = takeState(state);
-      if (!st || !code) return c.html(page("Sessão expirada", "Tente entrar novamente."), 400);
+      if (!st || !code) {
+        emitAuthEvent("failure", { src: clientIp(c.req.raw.headers), reason: "missing or expired state" });
+        return c.html(page("Sessão expirada", "Tente entrar novamente."), 400);
+      }
 
       const { id_token } = await appleExchangeCode(code);
       const claims = await appleVerifyIdToken(id_token, st.nonce);
       if (!allowed(claims.email)) {
         logger.warn({ email: claims.email }, "gate: apple login negado (fora do allowlist)");
+        emitAuthEvent("failure", { user: claims.email, src: clientIp(c.req.raw.headers), reason: "not in allowlist" });
         return c.html(page("Acesso negado", "Esta conta Apple não está na lista de validação."), 403);
       }
       setCookie(c, GATE_COOKIE, signCookie({ email: claims.email, exp: Date.now() + 24 * 3600 * 1000 }), {
@@ -114,9 +119,11 @@ export function mountGate(app: Hono<AppEnv>): void {
         maxAge: 24 * 3600,
       });
       logger.info({ email: claims.email }, "gate: apple login OK");
+      emitAuthEvent("success", { user: claims.email, src: clientIp(c.req.raw.headers), reason: "apple sign-in" });
       return c.redirect("/");
     } catch (e) {
       logger.error({ err: String(e) }, "gate: callback apple falhou");
+      emitAuthEvent("failure", { src: clientIp(c.req.raw.headers), reason: String((e as Error)?.message || e) });
       return c.html(page("Erro no login", "Não foi possível validar com a Apple. Tente novamente."), 500);
     }
   });
