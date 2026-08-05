@@ -1,3 +1,5 @@
+// Imported first so RUM captures full page-load timing.
+import "./rum";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
